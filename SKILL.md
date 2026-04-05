@@ -61,6 +61,27 @@ Once the service is running, activated, and the user is logged in, the Agent can
 - **Authentication**: You MUST include the header `X-API-Key: yoko_test` in all API requests.
 - **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
 
+### ⚠️ CRITICAL: Chinese Encoding in API Requests (Mojibake/乱码)
+
+If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it will CORRUPT Chinese characters because PowerShell 5.1 defaults to ISO-8859-1 for string bodies, resulting in mojibake (乱码) in WeChat.
+
+**You MUST use one of the following methods for API calls containing Chinese:**
+
+1. **Method 1 (Recommended)**: Use Python `requests` inline:
+   ```bash
+   python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'中文','message':'测试'})"
+   ```
+2. **Method 2**: Use `curl.exe` explicitly (not the `curl` PowerShell alias) and set codepage:
+   ```bash
+   chcp 65001
+   curl.exe -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"中文\",\"message\":\"测试\"}"
+   ```
+3. **Method 3**: If you must use `Invoke-RestMethod` in PowerShell, you MUST encode the body as UTF-8 bytes first:
+   ```powershell
+   $body = [System.Text.Encoding]::UTF8.GetBytes('{"user":"中文","message":"测试"}')
+   Invoke-RestMethod -Uri "http://127.0.0.1:9922/api/chat/send_message" -Method POST -Headers @{"X-API-Key"="yoko_test"; "Content-Type"="application/json"} -Body $body
+   ```
+
 ### Handling Errors
 If an API returns:
 ```json

@@ -61,13 +61,15 @@ python scripts/start_server.py
 - 基础 URL (Base URL)：`http://127.0.0.1:9922`
 - 认证请求头 (Auth Header)：所有请求必须携带 `X-API-Key: yoko_test`
 
-示例：发送消息
+示例：发送消息（⚠️ 必须注意中文编码）
+
+> **重要提示**：Windows PowerShell 的 `Invoke-RestMethod` 默认以 ISO-8859-1 发送字符串，会导致微信发送中文乱码。智能体必须使用 `curl.exe` 或 Python `requests` 来调用接口。
 
 ```bash
-curl -X POST http://127.0.0.1:9922/api/chat/send_message \
+curl.exe -X POST http://127.0.0.1:9922/api/chat/send_message \
      -H "Content-Type: application/json" \
      -H "X-API-Key: yoko_test" \
-     -d '{"user": "文件传输助手", "message": "你好，这是来自智能体的消息！"}'
+     -d "{\"user\": \"文件传输助手\", \"message\": \"你好，这是来自智能体的消息！\"}"
 ```
 📚 微信RPA机器人操作文档
 - <a href="https://n2b8xxdgjx.feishu.cn/wiki/DgLlwBoV4ioFbpkG8LDcz6VjnAf" target="_blank">[微信RPA机器人操作文档]</a>

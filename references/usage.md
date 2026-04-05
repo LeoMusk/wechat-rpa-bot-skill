@@ -56,3 +56,11 @@ The RPA service has a built-in Activation Code (License Key) mechanism.
 After successful login and activation, you can use the REST APIs defined in `references/openapi.json`.
 - **Authentication**: All API requests MUST include the header `X-API-Key: yoko_test`.
 - **Base URL**: `http://127.0.0.1:9922`
+
+### 5.1 Critical Rule for Chinese Characters
+If you (the Agent) are running in a Windows PowerShell environment, you MUST NEVER use `Invoke-RestMethod` directly with a JSON string body containing Chinese characters (e.g., `-Body '{"user":"中文"}'`). PowerShell 5.1 will encode this using `ISO-8859-1`, resulting in Mojibake (乱码) in WeChat.
+
+**You must use one of these safe methods:**
+1. **Python requests**: `python -c "import requests..."`
+2. **Native curl**: `curl.exe -X POST ... -d "{\"user\":\"中文\"}"`
+3. **PowerShell Bytes**: `$body = [System.Text.Encoding]::UTF8.GetBytes('...'); Invoke-RestMethod ... -Body $body`

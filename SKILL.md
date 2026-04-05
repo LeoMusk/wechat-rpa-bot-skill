@@ -26,6 +26,10 @@ To start the RPA backend and automatically initialize the WeChat connection, run
 python scripts/start_server.py
 ```
 
+**⚠️ CRITICAL NOTE FOR SANDBOXED AGENTS (like QClaw):**
+If you are running in a restricted sandbox or headless environment, starting `service.exe` via the script may launch it and WeChat in a hidden session (Session 0) that the user cannot see or interact with.
+If the API returns errors or the user complains they cannot see the WeChat window, **tell the user to MANUALLY double-click `service.exe` on their Windows desktop instead of having you start it.**
+
 **What this script does:**
 - Cleans up any zombie processes or port conflicts (9922).
 - Starts the RPA backend in the background (`--no-ui` mode).

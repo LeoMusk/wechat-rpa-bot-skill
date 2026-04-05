@@ -81,10 +81,13 @@ def start_service():
 def wait_for_health_check():
     """Wait until the service responds to the health check."""
     max_retries = 30
+    # Disable proxy for localhost requests to avoid system proxy (like 33210) interception
+    proxies = {"http": None, "https": None}
+    
     for i in range(max_retries):
         try:
             # The service might return 401/403 if it requires auth, but that means it's up.
-            response = requests.head(f"http://127.0.0.1:{PORT}/docs", timeout=2)
+            response = requests.head(f"http://127.0.0.1:{PORT}/docs", timeout=2, proxies=proxies)
             print("RPA Server is successfully running and ready to accept requests.")
             return True
         except requests.exceptions.ConnectionError:
@@ -103,8 +106,10 @@ def initialize_rpa():
         "Content-Type": "application/json",
         "X-API-Key": API_KEY
     }
+    proxies = {"http": None, "https": None}
+    
     try:
-        response = requests.post(f"http://127.0.0.1:{PORT}/api/init/multi", headers=headers, json={"timestamp": int(time.time() * 1000)}, timeout=10)
+        response = requests.post(f"http://127.0.0.1:{PORT}/api/init/multi", headers=headers, json={"timestamp": int(time.time() * 1000)}, timeout=10, proxies=proxies)
         if response.status_code == 200:
             result = response.json()
             if result.get("code") == "ENV_NOT_CONFIGURED":

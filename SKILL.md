@@ -61,20 +61,25 @@ Once the service is running, activated, and the user is logged in, the Agent can
 - **Authentication**: You MUST include the header `X-API-Key: yoko_test` in all API requests.
 - **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
 
+### ⚠️ CRITICAL: Bypass System Proxy for localhost
+
+If the user's machine has a system proxy enabled (e.g., VPNs running on ports like `33210` or `7890`), Agent API calls to `127.0.0.1` might be intercepted and fail!
+You MUST explicitly tell your HTTP client to bypass proxies for `127.0.0.1`.
+
 ### ⚠️ CRITICAL: Chinese Encoding in API Requests (Mojibake/乱码)
 
 If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it will CORRUPT Chinese characters because PowerShell 5.1 defaults to ISO-8859-1 for string bodies, resulting in mojibake (乱码) in WeChat.
 
-**You MUST use one of the following methods for API calls containing Chinese:**
+**You MUST use one of the following methods for API calls containing Chinese to ensure UTF-8 AND Proxy Bypass:**
 
-1. **Method 1 (Recommended)**: Use Python `requests` inline:
+1. **Method 1 (Recommended)**: Use Python `requests` inline (explicitly disabling proxies):
    ```bash
-   python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'中文','message':'测试'})"
+   python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'中文','message':'测试'}, proxies={'http': None, 'https': None})"
    ```
-2. **Method 2**: Use `curl.exe` explicitly (not the `curl` PowerShell alias) and set codepage:
+2. **Method 2**: Use `curl.exe` explicitly and set `--noproxy`:
    ```bash
    chcp 65001
-   curl.exe -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"中文\",\"message\":\"测试\"}"
+   curl.exe --noproxy "*" -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"中文\",\"message\":\"测试\"}"
    ```
 3. **Method 3**: If you must use `Invoke-RestMethod` in PowerShell, you MUST encode the body as UTF-8 bytes first:
    ```powershell

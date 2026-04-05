@@ -15,12 +15,18 @@ If you (the Agent) are asked to install this skill from GitHub:
    git clone https://github.com/your-repo/wechat-rpa-bot-skill.git
    cd wechat-rpa-bot-skill
    ```
-2. **Install Python Dependencies** (for the startup script):
+2. **Download the RPA Core Service (`service.exe`)**:
+   The Python startup script expects the compiled RPA service binary in the project root.
+   The Agent MUST download `service.exe` from the GitHub [Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) (e.g., `wechat rpa bot service-v1.7.0`) and save it to the root of this skill directory.
+
+   ```bash
+   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
+   ```
+
+3. **Install Python Dependencies** (for the startup script):
    ```bash
    pip install psutil requests
    ```
-3. **Download the RPA Core** (if applicable):
-   If the repo doesn't contain `service.exe`, instruct the user to download the latest `service.exe` from the Releases page and place it in the project root.
 
 ## 3. Configuration & Activation
 The RPA service is activated via a License Code (Activation Code) rather than a static API key.

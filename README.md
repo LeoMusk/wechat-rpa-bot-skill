@@ -21,12 +21,20 @@
    ```bash
    git clone [https://github.com/YOUR_USERNAME/wechat-rpa-bot-skill.git](https://github.com/YOUR_USERNAME/wechat-rpa-bot-skill.git)
    cd wechat-rpa-bot-skill
-2. **安装 Python 依赖（用于启动脚本）**：
+2. **下载核心服务组件 (`service.exe`)**：
+   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.0` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
+
+   *Agent 可以使用类似以下的命令自动下载（注意替换为最新的 release URL）：*
+   ```bash
+   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
+   ```
+
+3. **安装 Python 依赖（用于启动脚本）**：
 
 ```bash
 pip install psutil requests
 ```
-3. **无需额外配置认证（Token）**：
+4. **无需额外配置认证（Token）**：
    现在项目采用**激活码 (Activation Code)**方式认证。智能体只需在服务启动后，引导用户提供激活码，并直接调用自带的激活接口完成绑定，无需用户手动修改环境变量。
 
 ## 🚀 使用指南

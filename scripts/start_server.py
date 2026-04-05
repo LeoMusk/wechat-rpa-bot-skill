@@ -7,7 +7,6 @@ import psutil
 import socket
 
 PORT = 9922
-API_KEY = os.getenv("WEBOT_API_KEY", "yoko_test") # Default test key or read from env
 
 def kill_process_on_port(port):
     """Find and kill the process listening on the specified port."""
@@ -91,11 +90,10 @@ def wait_for_health_check():
     return False
 
 def initialize_rpa():
-    """Call the initialization API to bind WeChat and activate the RPA."""
-    print("Initializing RPA and binding to WeChat...")
+    """Call the initialization API to check status and bind WeChat."""
+    print("Checking RPA status and initializing WeChat binding...")
     headers = {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY
+        "Content-Type": "application/json"
     }
     try:
         response = requests.post(f"http://127.0.0.1:{PORT}/api/init/multi", headers=headers, json={"timestamp": int(time.time() * 1000)}, timeout=10)
@@ -107,6 +105,10 @@ def initialize_rpa():
             else:
                 print("Initialization successful:", result)
             return True
+        elif response.status_code in [401, 403]:
+            print("Notice: The software needs to be activated or is missing auth tokens.")
+            print("The Agent can activate the software by calling /api/license/activate with an Activation Code.")
+            return False
         else:
             print(f"Initialization failed with status {response.status_code}: {response.text}")
             return False

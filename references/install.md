@@ -22,14 +22,11 @@ If you (the Agent) are asked to install this skill from GitHub:
 3. **Download the RPA Core** (if applicable):
    If the repo doesn't contain `service.exe`, instruct the user to download the latest `service.exe` from the Releases page and place it in the project root.
 
-## 3. Configuration (API Token)
-The RPA service requires authentication to prevent unauthorized local access.
-1. Create a `.env` file in the root of the project.
-2. Ask the user for their API Token (e.g., from their YokoWebot account) and save it:
-   ```env
-   WEBOT_API_KEY=your_token_here
-   ```
-   *(If testing locally, you can default to `WEBOT_API_KEY=yoko_test`)*
+## 3. Configuration & Activation
+The RPA service is activated via a License Code (Activation Code) rather than a static API key.
+There is no need to create a `.env` file or configure `WEBOT_API_KEY`. 
+
+Instead, the Agent will ask the user for an Activation Code at runtime and use the API to activate the service automatically.
 
 ## 4. Next Steps
-Once installed, you can start the service. Refer to `references/usage.md` or `SKILL.md` for instructions on how to start the RPA backend and guide the user to the UI.
+Once installed, you can start the service. Refer to `references/usage.md` or `SKILL.md` for instructions on how to start the RPA backend and bind the activation code.

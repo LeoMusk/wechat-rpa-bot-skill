@@ -41,11 +41,12 @@ If you receive this, **do not retry automatically**. Stop your current task and 
 ## 4. Activation Code
 
 The RPA service has a built-in Activation Code (License Key) mechanism. 
-- If the initialization fails due to license errors, the user must enter their Activation Code in the Frontend UI (`http://127.0.0.1:9922/`).
-- The Agent should simply point the user to the UI for activation.
+- If the software is not activated, the Agent can directly ask the user for their Activation Code.
+- Once provided, the Agent can automatically activate it by calling `GET /api/license/machine-code` and then `POST /api/license/activate` with the `activation_code` and `machine_code`.
+- Alternatively, the user can enter their Activation Code in the Frontend UI (`http://127.0.0.1:9922/`).
 
 ## 5. Using the API
 
 After successful login and activation, you can use the REST APIs defined in `references/openapi.json`.
-- **Authentication**: All API requests must include the header `X-API-Key: <WEBOT_API_KEY>`.
+- **Authentication**: No static API key is required. The service authenticates via the activated machine license.
 - **Base URL**: `http://127.0.0.1:9922`

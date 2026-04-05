@@ -62,12 +62,7 @@
     "/api/init/multi": {
       "post": {
         "summary": "Initialize multiple WeChat instances",
-        "description": "Initializes all active WeChat instances and retrieves their account info. Requires X-API-Key.",
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
+        "description": "Initializes all active WeChat instances and retrieves their account info.",
         "requestBody": {
           "required": true,
           "content": {
@@ -85,8 +80,8 @@
           "400": {
             "description": "No WeChat instances detected."
           },
-          "403": {
-            "description": "Invalid API Key."
+          "401": {
+            "description": "Software not activated."
           }
         }
       }

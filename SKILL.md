@@ -11,11 +11,8 @@ This skill allows any Agent (like OpenClaw) to act as a WeChat assistant by hook
 
 If the user wants to install this skill or hasn't set it up yet:
 1. Ensure the user is on **Windows** and has **WeChat Desktop** installed.
-2. The user must have a valid `WEBOT_API_KEY` (Token) for the Agent to authenticate. Ask the user to create a `.env` file in the project root containing:
-   ```env
-   WEBOT_API_KEY=your_token_here
-   ```
-3. If running from source, ensure `python` is installed.
+2. If running from source, ensure `python` is installed.
+3. The project uses an **Activation Code (License Code)** system instead of tokens. You do NOT need to configure a `.env` file.
 
 ## 2. Starting and Activating the RPA Service
 
@@ -29,25 +26,28 @@ python scripts/start_server.py
 - Cleans up any zombie processes or port conflicts (9922).
 - Starts the RPA backend in the background (`--no-ui` mode).
 - Waits for the health check.
-- **Automatically calls the `/api/init/multi` endpoint** to bind to WeChat and perform RPA initialization (using the `WEBOT_API_KEY`).
+- **Automatically calls the `/api/init/multi` endpoint** to bind to WeChat and perform RPA initialization.
 
 *Note: The script will exit once the service is running successfully in the background.*
 
 ## 3. UI Interaction & Software Activation
 
-The RPA service is headless for the Agent, but requires the user to activate the software manually using an Activation Code. 
-Once the server is running, you **MUST** inform the user:
+If the user has not activated the software yet, the Agent can autonomously activate it by asking the user for their **Activation Code**:
+1. The Agent calls `GET /api/license/machine-code` to retrieve the device's machine code.
+2. The Agent asks the user for their Activation Code.
+3. The Agent calls `POST /api/license/activate` with the `activation_code` and `machine_code`.
 
-> "The WeChat RPA service has started. Please open the Frontend UI in your browser at http://127.0.0.1:9922/ to enter your Activation Code or perform any initial configurations. Let me know when you are done!"
+Alternatively, the Agent can inform the user:
+> "The WeChat RPA service has started. Please provide your Activation Code, and I will activate the device for you. You can also open http://127.0.0.1:9922/ to enter it manually."
 
 If the `start_server.py` output mentions `ENV_NOT_CONFIGURED`, remind the user to configure the WeChat environment via the UI or let you know so you can run the auto-config API.
 
 ## 4. API Usage (Agent Control)
 
-Once the service is running and the user is logged in, the Agent can control WeChat via HTTP REST APIs.
+Once the service is running, activated, and the user is logged in, the Agent can control WeChat via HTTP REST APIs.
 
 - **Base URL**: `http://127.0.0.1:9922`
-- **Authentication**: Include header `X-API-Key: <WEBOT_API_KEY>` in all requests.
+- **Authentication**: No static token required; authenticated via the bound Activation Code.
 - **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
 
 ### Handling Errors

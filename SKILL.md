@@ -61,14 +61,11 @@ When the user asks to "打开UI", "配置界面", or "使用前端":
 
 1. **Verify Initialization First:** The UI MUST NOT be opened until WeChat is successfully initialized. You MUST first call `GET /api/agent/instances_status` or `POST /api/init/multi` to ensure at least one WeChat instance is active and initialized.
    - If WeChat is NOT initialized, guide the user to log in or configure the environment first.
-2. **Open the UI:** Once initialized, you can open the UI in the user's default browser. Since you might be in a sandbox, you should attempt to use Python to launch the browser on the host:
-   ```python
-   import webbrowser
-   # Try to open the UI in the default browser
-   webbrowser.open('http://127.0.0.1:9922/')
-   ```
-3. **Fallback Link:** Always provide a clickable Markdown link in your response in case the programmatic launch fails:
-   > "我已经为您准备好了可视化配置界面，如果浏览器没有自动弹出，请直接点击下方链接打开：
+2. **Provide a Clickable Link ONLY:** Once initialized, you MUST provide a clickable Markdown link to the user so they can open it in their own normal browser. 
+   🛑 **CRITICAL FOR SANDBOX:** Do NOT use Python (`webbrowser.open()`) or any shell commands to open the URL. If you do, it will trigger the sandbox's broken internal browser which will CRASH the entire Agent client and kill the RPA service!
+   
+   Always respond exactly like this:
+   > "我已经为您准备好了可视化配置界面，请直接点击下方链接在您的独立浏览器中打开：
    > 👉 [打开微信 RPA 控制台](http://127.0.0.1:9922/)"
 
 Alternatively, the Agent can inform the user:

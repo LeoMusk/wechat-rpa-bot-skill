@@ -54,6 +54,10 @@ def start_service():
     env["PYTHONUTF8"] = "1"
     env["VITE_CHANNEL_ID"] = "agent_generic"
     env["YOKO_CHANNEL_ID"] = "agent_generic"
+    # CRITICAL: Force the underlying webot backend to run in completely headless mode
+    # bypassing any internal GUI creation logic
+    env["HEADLESS_MODE"] = "1"
+    env["DISABLE_WEBVIEW"] = "1"
     
     # DETACHED_PROCESS = 0x00000008, prevents child from attaching to console and blocking Agent
     flags = 0x00000008 if sys.platform == "win32" else 0

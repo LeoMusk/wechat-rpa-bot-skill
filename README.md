@@ -62,5 +62,5 @@ curl -X POST http://127.0.0.1:9922/api/chat/send_message \
      -d '{"user": "文件传输助手", "message": "你好，这是来自智能体的消息！"}'
 ```
 📚 微信RPA机器人操作文档
-- [智能体技能定义 (Agent Skill Definition)：关于智能体应如何理解和调用此技能的详细说明。](https://n2b8xxdgjx.feishu.cn/wiki/DgLlwBoV4ioFbpkG8LDcz6VjnAf)
-- [微信AI销售机器人官网](https://www.yokoagi.com/)
+- <a href="https://n2b8xxdgjx.feishu.cn/wiki/DgLlwBoV4ioFbpkG8LDcz6VjnAf" target="_blank">[微信RPA机器人操作文档]</a>
+- <a href="https://www.yokoagi.com/" target="_blank">微信AI销售机器人官网</a>

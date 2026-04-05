@@ -32,9 +32,15 @@ If you are running inside a restricted sandbox, you **CANNOT** see or control th
    import os
    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
    bat_path = os.path.join(desktop, "启动微信RPA.bat")
-   skill_dir = os.path.abspath(".")
-   with open(bat_path, "w", encoding="gbk") as f:
-       f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\nset WEBOT_BACKEND_MODE=1\nset HEADLESS_MODE=1\nset DISABLE_WEBVIEW=1\nset NO_BROWSER=1\npython scripts\\start_server.py --no-ui --channel-id agent_generic\npause")
+   
+   # Only create if it doesn't exist to avoid annoying the user
+   if not os.path.exists(bat_path):
+       skill_dir = os.path.abspath(".")
+       with open(bat_path, "w", encoding="gbk") as f:
+           f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\nset WEBOT_BACKEND_MODE=1\nset HEADLESS_MODE=1\nset DISABLE_WEBVIEW=1\nset NO_BROWSER=1\npython scripts\\start_server.py --no-ui --channel-id agent_generic\npause")
+       print(f"Created: {bat_path}")
+   else:
+       print(f"Already exists: {bat_path}")
    ```
    
    🛑 **ABSOLUTE RULE FOR AGENT**: You are **STRICTLY FORBIDDEN** from executing `start_server.py`, the `.bat` file, or the `.ps1` file yourself using your shell tools. Do NOT use `subprocess`, `os.system`, or `powershell -Command` to start the server. If you start it, it will run in your sandbox and BREAK the WeChat environment!

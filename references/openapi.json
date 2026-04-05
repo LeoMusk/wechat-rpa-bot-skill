@@ -1,0 +1,141 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WeChat RPA Bot API",
+    "version": "1.0.0",
+    "description": "API for OpenClaw/Agent to interact with the local WeChat RPA service. Focuses on startup, initialization, and authentication."
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "MultiInstanceRequest": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      },
+      "ActivationRequest": {
+        "type": "object",
+        "required": ["activation_code", "machine_code"],
+        "properties": {
+          "activation_code": {
+            "type": "string"
+          },
+          "machine_code": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/agent/backend_status": {
+      "get": {
+        "summary": "Get backend running status",
+        "description": "Check if the RPA backend server is running and get its full status including tasks and features.",
+        "responses": {
+          "200": {
+            "description": "Returns the status of the backend."
+          }
+        }
+      }
+    },
+    "/api/agent/instances_status": {
+      "get": {
+        "summary": "Get WeChat instances status",
+        "description": "Check the status of all WeChat instances. Used by the Agent to determine if WeChat needs initialization.",
+        "responses": {
+          "200": {
+            "description": "Returns a list of WeChat instances and their initialization status."
+          }
+        }
+      }
+    },
+    "/api/init/multi": {
+      "post": {
+        "summary": "Initialize multiple WeChat instances",
+        "description": "Initializes all active WeChat instances and retrieves their account info. Requires X-API-Key.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiInstanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Initialization successful."
+          },
+          "400": {
+            "description": "No WeChat instances detected."
+          },
+          "403": {
+            "description": "Invalid API Key."
+          }
+        }
+      }
+    },
+    "/api/license/machine-code": {
+      "get": {
+        "summary": "Get Machine Code",
+        "description": "Get the device's machine code, which is required for license activation.",
+        "responses": {
+          "200": {
+            "description": "Returns the machine code."
+          }
+        }
+      }
+    },
+    "/api/license/activate": {
+      "post": {
+        "summary": "Activate License",
+        "description": "Activate the RPA software using an activation code and machine code.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activation successful."
+          },
+          "500": {
+            "description": "Activation failed."
+          }
+        }
+      }
+    },
+    "/api/license/verify": {
+      "get": {
+        "summary": "Verify License",
+        "description": "Verify if the current license is active and valid.",
+        "responses": {
+          "200": {
+            "description": "Returns the validation status."
+          }
+        }
+      }
+    }
+  }
+}

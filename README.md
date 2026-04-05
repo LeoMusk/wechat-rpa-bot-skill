@@ -43,10 +43,10 @@ python scripts/start_server.py
 ```
 *This script automatically cleans up old processes, starts the backend (`service.exe` or `server.py`), waits for the health check, and calls the initialization API.*
 
-### 2. User Login (Human Action)
-Because WeChat requires a physical QR code scan, the Agent **must** instruct the user to open the UI after the service starts:
+### 2. Software Activation (Human Action)
+The RPA service requires a valid Activation Code to run. The Agent **must** instruct the user to open the UI after the service starts to complete activation:
 
-> "The WeChat RPA service has started. Please open **http://127.0.0.1:9922/** in your browser to scan the WeChat QR Code or configure settings. Let me know when you're done!"
+> "The WeChat RPA service has started. Please open **http://127.0.0.1:9922/** in your browser to enter your Activation Code and complete the setup. Let me know when you're done!"
 
 ### 3. API Control
 Once the user is logged in, the Agent can control WeChat via the REST API.

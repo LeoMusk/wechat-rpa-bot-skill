@@ -33,12 +33,12 @@ python scripts/start_server.py
 
 *Note: The script will exit once the service is running successfully in the background.*
 
-## 3. UI Interaction & User Login
+## 3. UI Interaction & Software Activation
 
-The RPA service is headless for the Agent, but requires the user to log in to WeChat manually via a QR code. 
+The RPA service is headless for the Agent, but requires the user to activate the software manually using an Activation Code. 
 Once the server is running, you **MUST** inform the user:
 
-> "The WeChat RPA service has started. Please open the Frontend UI in your browser at http://127.0.0.1:9922/ to complete the WeChat login (scan the QR code) or perform any initial configurations. Let me know when you are done!"
+> "The WeChat RPA service has started. Please open the Frontend UI in your browser at http://127.0.0.1:9922/ to enter your Activation Code or perform any initial configurations. Let me know when you are done!"
 
 If the `start_server.py` output mentions `ENV_NOT_CONFIGURED`, remind the user to configure the WeChat environment via the UI or let you know so you can run the auto-config API.
 

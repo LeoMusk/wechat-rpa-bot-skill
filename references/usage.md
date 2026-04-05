@@ -19,11 +19,11 @@ This script will:
 
 ## 2. Directing the User to the UI
 
-While the Agent handles the backend logic, **WeChat requires a physical login (QR Code scan) and some configurations (SOPs, Activations) are easier via the UI.**
+While the Agent handles the backend logic, **the software must be activated via an Activation Code, and some configurations (SOPs) are easier via the UI.**
 
 Once the service is started successfully, you MUST tell the user:
 
-> "The RPA Backend is running successfully. Please open your browser and navigate to the Frontend UI: **http://127.0.0.1:9922/** to scan the WeChat QR Code or configure any missing settings. Let me know when you are done so I can proceed."
+> "The RPA Backend is running successfully. Please open your browser and navigate to the Frontend UI: **http://127.0.0.1:9922/** to enter your Activation Code or configure any missing settings. Let me know when you are done so I can proceed."
 
 ## 3. Handling API "Action Required"
 

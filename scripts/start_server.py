@@ -59,6 +59,11 @@ def start_service():
     env["HEADLESS_MODE"] = "1"
     env["DISABLE_WEBVIEW"] = "1"
     
+    # CRITICAL: Prevent the backend from automatically opening the default browser
+    # We want the agent to control when and how the UI is opened.
+    env["NO_BROWSER"] = "1"
+    env["AUTO_OPEN_BROWSER"] = "0"
+    
     # DETACHED_PROCESS = 0x00000008, prevents child from attaching to console and blocking Agent
     flags = 0x00000008 if sys.platform == "win32" else 0
     

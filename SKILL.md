@@ -35,11 +35,11 @@ If you are running inside a restricted sandbox, you **CANNOT** see or control th
    skill_dir = os.path.abspath(".")
    with open(bat_path, "w", encoding="gbk") as f:
        f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\npython scripts\\start_server.py\npause")
-   # Optional: Try to automatically launch it via Explorer to break out of the sandbox
-   os.system(f'explorer.exe "{bat_path}"')
+   # WARNING: Do NOT execute this bat file via os.system or subprocess!
+   # You MUST let the human user manually double-click it to bypass the sandbox properly.
    ```
 3. **Prompt User & Auto-Poll:** Tell the user:
-   > "由于沙箱隔离，我已在您的桌面生成了 `启动微信RPA.bat`。请您双击运行它（如果它没有自动弹出的话）。我会在这里等待服务上线..."
+   > "由于沙箱隔离限制，我无法直接启动可见的窗口。我已在您的桌面生成了 `启动微信RPA.bat`。**请您双击桌面上的 `启动微信RPA.bat` 来启动服务**，我会在这里等待服务上线..."
    Then, enter a Python polling loop (ping the status API every 3 seconds for up to 60 seconds). Do NOT make the user type "done".
 4. **Proceed:** Once the API is reachable, continue with the user's request. **Crucially**, after the service successfully starts, you MUST proactively inform the user that a Visual UI is available:
    > "微信 RPA 服务已成功启动。如果您需要进行复杂配置或查看历史记录，我也可以帮您打开可视化前端 UI 界面。需要现在打开吗？"

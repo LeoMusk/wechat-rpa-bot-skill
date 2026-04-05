@@ -97,3 +97,11 @@ If an API returns:
 }
 ```
 Stop your execution and tell the user to open the UI (`http://127.0.0.1:9922/`) to resolve the issue.
+
+## 5. Progressive Documentation (Agent Knowledge Base)
+
+This skill provides a set of progressive disclosure documents to help you understand complex operational scenarios (like auto-adding friends, posting moments, config schemas, etc.).
+**Do NOT guess how complex features work.** When a user asks you to perform a specific task (e.g., "帮我开启自动通过好友" or "设置群发任务"), you MUST read the index document first to find the relevant SOP or schema:
+
+- **Read `docs/index.md`** to discover available SOPs and configuration schemas for advanced features.
+- Follow the instructions in the specific `docs/*.md` file before calling the related APIs.

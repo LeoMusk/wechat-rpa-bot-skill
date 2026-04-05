@@ -2,11 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-这是一个专为 AI 智能体（Agent，如 [OpenClaw](https://github.com/openclaw/openclaw)、[QClaw](https://qclaw.qq.com/) 等各种Claw）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
+这是一个专为 AI 智能体（Agent，如 [OpenClaw](https://github.com/openclaw/openclaw)、YokoAgent 等）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
 
 该技能允许任何 AI 智能体通过 HTTP REST API 自主安装、配置、启动和控制本地微信桌面端实例。它弥合了大语言模型（LLM）推理与真实世界微信操作之间的鸿沟。
-
-该产品是基于迭代了一年多的微信RPA项目进行skill化（[YokoAIBot微信机器人](https://www.yokoagi.com/)），目前接口已经在逐步改造中...
 
 ## 🌟 核心特性
 
@@ -21,7 +19,7 @@
 
 1. **克隆代码库**：
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/wechat-rpa-bot-skill.git](https://github.com/YOUR_USERNAME/wechat-rpa-bot-skill.git)
+   git clone https://github.com/LeoMusk/wechat-rpa-bot-skill.git
    cd wechat-rpa-bot-skill
 2. **下载核心服务组件 (`service.exe`)**：
    此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.0` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
@@ -39,7 +37,17 @@ pip install psutil requests
 4. **无需额外配置认证（Token）**：
    现在项目采用**激活码 (Activation Code)**方式认证。智能体只需在服务启动后，引导用户提供激活码，并直接调用自带的激活接口完成绑定，无需用户手动修改环境变量。
 
-## 🚀 使用指南
+## � 快速更新指南 (面向普通用户)
+
+由于该 Skill 的能力迭代非常频繁（包含接口升级、新文档、启动逻辑优化等），为了确保您体验到最新的 RPA 功能，建议定期更新代码库。
+
+您**无需手动敲命令**去拉取代码，只需直接对您的 Agent（如 QClaw、OpenClaw 等）发送以下提示词（Prompt）：
+
+> "微信 RPA Skill 更新了，请帮我重新安装/拉取下最新代码：https://github.com/LeoMusk/wechat-rpa-bot-skill.git"
+
+Agent 接收到此指令后，通常会自动检测该本地代码仓库的变更，帮您执行 `git pull` 拉取最新代码，甚至重新下载依赖和二进制文件，让您的技能一键保持最新状态！
+
+## � 使用指南
 
 ### 1. 启动服务
 在尝试进行任何微信操作之前，智能体应该先启动 RPA 后端服务。运行提供的启动脚本：
@@ -57,7 +65,15 @@ python scripts/start_server.py
 
 > 话术参考："微信RPA服务已启动，请提供您的激活码，我将为您自动完成设备绑定。"
 
-### 3. API 控制
+### 3. 可视化 UI 界面 (Human-in-the-Loop)
+该技能自带完整的前端操作界面（位于 `webot/` 目录下），服务启动后，该界面会自动挂载在根路由下。
+当您的微信实例初始化成功后，您可以随时向 Agent 发送如下提示词来打开界面进行复杂配置或查看日志：
+
+> "帮我打开微信 RPA 的配置界面。"
+
+Agent 会尝试自动在您的浏览器中唤起 `http://127.0.0.1:9922/`，或者直接提供一个可点击的链接供您访问。
+
+### 4. API 控制
 激活并登录成功后，智能体即可通过 REST API 控制微信。
 
 - 基础 URL (Base URL)：`http://127.0.0.1:9922`

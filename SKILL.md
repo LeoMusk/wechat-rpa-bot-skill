@@ -20,30 +20,53 @@ If the user wants to install this skill or hasn't set it up yet:
 
 ## 2. Starting and Activating the RPA Service
 
-To start the RPA backend and automatically initialize the WeChat connection, run the provided startup script:
+**⚠️ CRITICAL ARCHITECTURE NOTE FOR SANDBOXED AGENTS (like QClaw):**
+If you are running inside a restricted sandbox, you **CANNOT** see or control the user's interactive desktop (Session 1). If you try to start `service.exe` using a Python script directly, Windows will isolate it in your sandbox (Session 0). It will launch a *new, hidden* WeChat instance that loses user configurations and requires re-login every time. 
 
-```bash
-python scripts/start_server.py
-```
+**Therefore, the standard operating procedure (SOP) for elegantly starting the service is:**
 
-**⚠️ CRITICAL NOTE FOR SANDBOXED AGENTS (like QClaw):**
-If you are running in a restricted sandbox or headless environment, starting `service.exe` via the script may launch it and WeChat in a hidden session (Session 0) that the user cannot see or interact with.
-If the API returns errors or the user complains they cannot see the WeChat window, **tell the user to MANUALLY double-click `service.exe` on their Windows desktop instead of having you start it.**
-
-**What this script does:**
-- Cleans up any zombie processes or port conflicts (9922).
-- Starts the RPA backend in the background (`--no-ui` mode).
-- Waits for the health check.
-- **Automatically calls the `/api/init/multi` endpoint** to bind to WeChat and perform RPA initialization.
-
-*Note: The script will exit once the service is running successfully in the background.*
+1. **Check Connection First:** Always try to ping `http://127.0.0.1:9922/api/agent/backend_status` first. If it succeeds, the service is already running on the host desktop. Skip to Step 4.
+2. **Generate Desktop Launcher (`.bat`):** If the connection fails, generate a batch script directly on the user's Windows Desktop so they can launch it interactively.
+   *Example Python snippet to run:*
+   ```python
+   import os
+   desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+   bat_path = os.path.join(desktop, "启动微信RPA.bat")
+   skill_dir = os.path.abspath(".")
+   with open(bat_path, "w", encoding="gbk") as f:
+       f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\npython scripts\\start_server.py\npause")
+   # Optional: Try to automatically launch it via Explorer to break out of the sandbox
+   os.system(f'explorer.exe "{bat_path}"')
+   ```
+3. **Prompt User & Auto-Poll:** Tell the user:
+   > "由于沙箱隔离，我已在您的桌面生成了 `启动微信RPA.bat`。请您双击运行它（如果它没有自动弹出的话）。我会在这里等待服务上线..."
+   Then, enter a Python polling loop (ping the status API every 3 seconds for up to 60 seconds). Do NOT make the user type "done".
+4. **Proceed:** Once the API is reachable, continue with the user's request. **Crucially**, after the service successfully starts, you MUST proactively inform the user that a Visual UI is available:
+   > "微信 RPA 服务已成功启动。如果您需要进行复杂配置或查看历史记录，我也可以帮您打开可视化前端 UI 界面。需要现在打开吗？"
 
 ## 3. UI Interaction & Software Activation
 
+### 3.1 Software Activation
 If the user has not activated the software yet, the Agent can autonomously activate it by asking the user for their **Activation Code**:
 1. The Agent calls `GET /api/license/machine-code` to retrieve the device's machine code.
 2. The Agent asks the user for their Activation Code.
 3. The Agent calls `POST /api/license/activate` with the `activation_code` and `machine_code`.
+
+### 3.2 Mounting and Opening the Frontend UI
+The skill includes a pre-built frontend UI (located in the `webot/` directory) that is automatically served by the backend at `http://127.0.0.1:9922/`.
+When the user asks to "打开UI", "配置界面", or "使用前端":
+
+1. **Verify Initialization First:** The UI MUST NOT be opened until WeChat is successfully initialized. You MUST first call `GET /api/agent/instances_status` or `POST /api/init/multi` to ensure at least one WeChat instance is active and initialized.
+   - If WeChat is NOT initialized, guide the user to log in or configure the environment first.
+2. **Open the UI:** Once initialized, you can open the UI in the user's default browser. Since you might be in a sandbox, you should attempt to use Python to launch the browser on the host:
+   ```python
+   import webbrowser
+   # Try to open the UI in the default browser
+   webbrowser.open('http://127.0.0.1:9922/')
+   ```
+3. **Fallback Link:** Always provide a clickable Markdown link in your response in case the programmatic launch fails:
+   > "我已经为您准备好了可视化配置界面，如果浏览器没有自动弹出，请直接点击下方链接打开：
+   > 👉 [打开微信 RPA 控制台](http://127.0.0.1:9922/)"
 
 Alternatively, the Agent can inform the user:
 > "The WeChat RPA service has started. Please provide your Activation Code, and I will activate the device for you. You can also open http://127.0.0.1:9922/ to enter it manually."

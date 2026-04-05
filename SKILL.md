@@ -47,7 +47,7 @@ If the `start_server.py` output mentions `ENV_NOT_CONFIGURED`, remind the user t
 Once the service is running, activated, and the user is logged in, the Agent can control WeChat via HTTP REST APIs.
 
 - **Base URL**: `http://127.0.0.1:9922`
-- **Authentication**: No static token required; authenticated via the bound Activation Code.
+- **Authentication**: You MUST include the header `X-API-Key: yoko_test` in all API requests.
 - **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
 
 ### Handling Errors

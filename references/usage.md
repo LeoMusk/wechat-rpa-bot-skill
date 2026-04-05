@@ -48,5 +48,5 @@ The RPA service has a built-in Activation Code (License Key) mechanism.
 ## 5. Using the API
 
 After successful login and activation, you can use the REST APIs defined in `references/openapi.json`.
-- **Authentication**: No static API key is required. The service authenticates via the activated machine license.
+- **Authentication**: All API requests MUST include the header `X-API-Key: yoko_test`.
 - **Base URL**: `http://127.0.0.1:9922`

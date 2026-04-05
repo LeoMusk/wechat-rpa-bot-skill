@@ -7,6 +7,7 @@ import psutil
 import socket
 
 PORT = 9922
+API_KEY = "yoko_test" # Fixed key for local agent API access
 
 def kill_process_on_port(port):
     """Find and kill the process listening on the specified port."""
@@ -93,7 +94,8 @@ def initialize_rpa():
     """Call the initialization API to check status and bind WeChat."""
     print("Checking RPA status and initializing WeChat binding...")
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY
     }
     try:
         response = requests.post(f"http://127.0.0.1:{PORT}/api/init/multi", headers=headers, json={"timestamp": int(time.time() * 1000)}, timeout=10)

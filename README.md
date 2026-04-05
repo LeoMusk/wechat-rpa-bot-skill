@@ -51,12 +51,14 @@ python scripts/start_server.py
 激活并登录成功后，智能体即可通过 REST API 控制微信。
 
 - 基础 URL (Base URL)：`http://127.0.0.1:9922`
+- 认证请求头 (Auth Header)：所有请求必须携带 `X-API-Key: yoko_test`
 
 示例：发送消息
 
 ```bash
 curl -X POST http://127.0.0.1:9922/api/chat/send_message \
      -H "Content-Type: application/json" \
+     -H "X-API-Key: yoko_test" \
      -d '{"user": "文件传输助手", "message": "你好，这是来自智能体的消息！"}'
 ```
 📚 微信RPA机器人操作文档

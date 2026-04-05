@@ -41,6 +41,11 @@
       "get": {
         "summary": "Get backend running status",
         "description": "Check if the RPA backend server is running and get its full status including tasks and features.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Returns the status of the backend."
@@ -52,6 +57,11 @@
       "get": {
         "summary": "Get WeChat instances status",
         "description": "Check the status of all WeChat instances. Used by the Agent to determine if WeChat needs initialization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Returns a list of WeChat instances and their initialization status."
@@ -63,6 +73,11 @@
       "post": {
         "summary": "Initialize multiple WeChat instances",
         "description": "Initializes all active WeChat instances and retrieves their account info.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {

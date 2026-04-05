@@ -27,7 +27,7 @@ If you are running inside a restricted sandbox, you **CANNOT** see or control th
 
 1. **Check Connection First:** Always try to ping `http://127.0.0.1:9922/api/agent/backend_status` first. If it succeeds, the service is already running on the host desktop. Skip to Step 4.
 2. **Generate Desktop Launcher (`.bat`):** If the connection fails, generate a batch script directly on the user's Windows Desktop so they can launch it interactively.
-   *Example Python snippet to run:*
+   *Example Python snippet to run (ONLY GENERATE, DO NOT EXECUTE):*
    ```python
    import os
    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -35,13 +35,16 @@ If you are running inside a restricted sandbox, you **CANNOT** see or control th
    skill_dir = os.path.abspath(".")
    with open(bat_path, "w", encoding="gbk") as f:
        f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\npython scripts\\start_server.py\npause")
-   # WARNING: Do NOT execute this bat file via os.system or subprocess!
-   # You MUST let the human user manually double-click it to bypass the sandbox properly.
    ```
-3. **Prompt User & Auto-Poll:** Tell the user:
-   > "由于沙箱隔离限制，我无法直接启动可见的窗口。我已在您的桌面生成了 `启动微信RPA.bat`。**请您双击桌面上的 `启动微信RPA.bat` 来启动服务**，我会在这里等待服务上线..."
-   Then, enter a Python polling loop (ping the status API every 3 seconds for up to 60 seconds). Do NOT make the user type "done".
-4. **Proceed:** Once the API is reachable, continue with the user's request. **Crucially**, after the service successfully starts, you MUST proactively inform the user that a Visual UI is available:
+   
+   🛑 **ABSOLUTE RULE FOR AGENT**: You are **STRICTLY FORBIDDEN** from executing `start_server.py`, the `.bat` file, or the `.ps1` file yourself using your shell tools. Do NOT use `subprocess`, `os.system`, or `powershell -Command` to start the server. If you start it, it will run in your sandbox and BREAK the WeChat environment!
+
+3. **Prompt User & YIELD:** Tell the user:
+   > "由于沙箱隔离限制，我无法直接在后台启动服务。我已在您的桌面生成了 `启动微信RPA.bat`。**请您手动双击桌面上的 `启动微信RPA.bat` 来启动服务**。启动成功后，请回复我 '已启动'。"
+   
+   **STOP HERE.** You MUST yield the conversation back to the user. Do NOT write a polling loop. Do NOT proceed until the user replies that they have started it.
+
+4. **Proceed:** Once the user confirms they started it, verify the API is reachable, then continue with the user's request. **Crucially**, after the service successfully starts, you MUST proactively inform the user that a Visual UI is available:
    > "微信 RPA 服务已成功启动。如果您需要进行复杂配置或查看历史记录，我也可以帮您打开可视化前端 UI 界面。需要现在打开吗？"
 
 ## 3. UI Interaction & Software Activation

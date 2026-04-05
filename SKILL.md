@@ -44,7 +44,10 @@ If the user has not activated the software yet, the Agent can autonomously activ
 Alternatively, the Agent can inform the user:
 > "The WeChat RPA service has started. Please provide your Activation Code, and I will activate the device for you. You can also open http://127.0.0.1:9922/ to enter it manually."
 
-If the `start_server.py` output mentions `ENV_NOT_CONFIGURED`, remind the user to configure the WeChat environment via the UI or let you know so you can run the auto-config API.
+If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, the Agent MUST automatically fix it by:
+1. Asking the user: "WeChat environment is not configured. Can I close your WeChat and automatically configure it?"
+2. If approved, call `POST /api/system/wechat41/auto_config`.
+3. Wait 5 seconds, then call `POST /api/init/multi` again.
 
 ## 4. API Usage (Agent Control)
 

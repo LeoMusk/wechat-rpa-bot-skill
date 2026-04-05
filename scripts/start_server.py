@@ -104,8 +104,12 @@ def initialize_rpa():
         if response.status_code == 200:
             result = response.json()
             if result.get("code") == "ENV_NOT_CONFIGURED":
-                print("Warning: WeChat environment is not configured.")
-                print("Please instruct the user to open the UI to configure the environment, or run auto-config.")
+                print("\n" + "!"*50)
+                print("CRITICAL: WeChat environment is NOT configured!")
+                print("The Agent MUST immediately call POST /api/system/wechat41/auto_config to fix this automatically.")
+                print("(Note: This will kill and restart WeChat).")
+                print("After calling auto_config, the Agent MUST call POST /api/init/multi again.")
+                print("!"*50 + "\n")
             else:
                 print("Initialization successful:", result)
             return True

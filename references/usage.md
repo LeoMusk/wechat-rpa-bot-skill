@@ -27,7 +27,7 @@ Once the service is started successfully, you MUST tell the user:
 
 ## 3. Handling API "Action Required"
 
-When making API calls (e.g., sending a message), you might receive a `401`/`403` or a specific payload indicating WeChat is offline:
+When making API calls, you might receive a payload indicating WeChat is offline:
 ```json
 {
   "success": false,
@@ -35,8 +35,14 @@ When making API calls (e.g., sending a message), you might receive a `401`/`403`
   "action_required": "OPEN_UI"
 }
 ```
-
 If you receive this, **do not retry automatically**. Stop your current task and instruct the user to open the UI (`http://127.0.0.1:9922/`) to resolve the issue.
+
+### 3.1 Handling `ENV_NOT_CONFIGURED`
+If the initialization or any API returns `{"code": "ENV_NOT_CONFIGURED"}`:
+1. The WeChat debug environment variables are missing.
+2. The Agent **must** ask the user: "Can I automatically configure your WeChat environment? This will restart your WeChat."
+3. Once the user approves, the Agent MUST call `POST /api/system/wechat41/auto_config` to inject variables.
+4. Wait 5 seconds for WeChat to restart, then call `POST /api/init/multi` to bind the instance.
 
 ## 4. Activation Code
 

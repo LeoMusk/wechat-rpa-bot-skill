@@ -69,6 +69,22 @@
         }
       }
     },
+    "/api/system/wechat41/auto_config": {
+      "post": {
+        "summary": "Auto-configure WeChat Environment",
+        "description": "DANGEROUS: Kills WeChat and injects environment variables/debug ports. ONLY call this if /api/init/multi returns ENV_NOT_CONFIGURED.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auto-configuration successful. WeChat will be restarted."
+          }
+        }
+      }
+    },
     "/api/init/multi": {
       "post": {
         "summary": "Initialize multiple WeChat instances",

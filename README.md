@@ -2,9 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-这是一个专为 AI 智能体（Agent，如 [OpenClaw](https://github.com/openclaw/openclaw)、YokoAgent 等）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
+这是一个专为 AI 智能体（Agent，如 [OpenClaw](https://github.com/openclaw/openclaw)、[QClaw](https://qclaw.qq.com/) 等各种Claw）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
 
 该技能允许任何 AI 智能体通过 HTTP REST API 自主安装、配置、启动和控制本地微信桌面端实例。它弥合了大语言模型（LLM）推理与真实世界微信操作之间的鸿沟。
+
+该产品是基于迭代了一年多的微信RPA项目进行skill化（[YokoAIBot微信机器人](https://www.yokoagi.com/)），目前接口已经在逐步改造中...
 
 ## 🌟 核心特性
 

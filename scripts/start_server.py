@@ -13,8 +13,8 @@ def kill_process_on_port(port):
     """Find and kill the process listening on the specified port."""
     for proc in psutil.process_iter(['pid', 'name', 'connections']):
         try:
-            for conn in proc.info.get('connections', []):
-                if conn.laddr.port == port:
+            for conn in proc.info.get('connections', []) or []:
+                if getattr(conn, 'status', '') == 'LISTEN' and getattr(conn.laddr, 'port', -1) == port:
                     print(f"Killing orphan process {proc.info['name']} (PID: {proc.info['pid']}) on port {port}")
                     # On Windows, taskkill /F /T is more reliable to kill process trees
                     subprocess.run(f"taskkill /F /T /PID {proc.info['pid']}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -26,8 +26,7 @@ def cleanup_old_processes():
     print("Cleaning up old processes...")
     kill_process_on_port(PORT)
     
-    # Kill any dangling service.exe
-    subprocess.run("taskkill /F /IM service.exe /T", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Removed dangerous 'taskkill /IM service.exe' because it kills Trae/IDE background services!
     
     # Give OS a moment to release ports and file handles
     time.sleep(2)
@@ -52,18 +51,21 @@ def start_service():
     env = os.environ.copy()
     env["WEBOT_BACKEND_MODE"] = "1"
     
+    # DETACHED_PROCESS = 0x00000008, prevents child from attaching to console and blocking Agent
+    flags = 0x00000008 if sys.platform == "win32" else 0
+    
     if os.path.exists(service_exe):
         print(f"Found built executable: {service_exe}")
-        process = subprocess.Popen([service_exe, "--no-ui"], cwd=project_root, env=env)
+        process = subprocess.Popen([service_exe, "--no-ui"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
     elif os.path.exists(dist_exe):
         print(f"Found built executable: {dist_exe}")
-        process = subprocess.Popen([dist_exe, "--no-ui"], cwd=project_root, env=env)
+        process = subprocess.Popen([dist_exe, "--no-ui"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
     elif os.path.exists(main_py):
         print(f"Found source file: {main_py}")
-        process = subprocess.Popen([sys.executable, main_py, "--no-ui"], cwd=project_root, env=env)
+        process = subprocess.Popen([sys.executable, main_py, "--no-ui"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
     elif os.path.exists(alt_main_py):
         print(f"Found source file: {alt_main_py}")
-        process = subprocess.Popen([sys.executable, alt_main_py, "--no-ui"], cwd=project_root, env=env)
+        process = subprocess.Popen([sys.executable, alt_main_py, "--no-ui"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
     else:
         print(f"Error: Could not find service.exe or server.py in {project_root}")
         print("Please ensure you have downloaded the release or cloned the repository correctly.")

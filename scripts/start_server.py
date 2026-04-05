@@ -58,18 +58,24 @@ def start_service():
     # DETACHED_PROCESS = 0x00000008, prevents child from attaching to console and blocking Agent
     flags = 0x00000008 if sys.platform == "win32" else 0
     
+    startupinfo = None
+    if sys.platform == "win32":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+    
     if os.path.exists(service_exe):
         print(f"Found built executable: {service_exe}")
-        process = subprocess.Popen([service_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
+        process = subprocess.Popen([service_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
     elif os.path.exists(dist_exe):
         print(f"Found built executable: {dist_exe}")
-        process = subprocess.Popen([dist_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
+        process = subprocess.Popen([dist_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
     elif os.path.exists(main_py):
         print(f"Found source file: {main_py}")
-        process = subprocess.Popen([sys.executable, main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
+        process = subprocess.Popen([sys.executable, main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
     elif os.path.exists(alt_main_py):
         print(f"Found source file: {alt_main_py}")
-        process = subprocess.Popen([sys.executable, alt_main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, close_fds=True)
+        process = subprocess.Popen([sys.executable, alt_main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
     else:
         print(f"Error: Could not find service.exe or server.py in {project_root}")
         print("Please ensure you have downloaded the release or cloned the repository correctly.")

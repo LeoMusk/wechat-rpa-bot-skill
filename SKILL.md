@@ -20,8 +20,8 @@ If the user wants to install this skill or hasn't set it up yet:
 
 ## 2. Starting and Activating the RPA Service
 
-**⚠️ CRITICAL ARCHITECTURE NOTE FOR SANDBOXED AGENTS (like QClaw):**
-If you are running inside a restricted sandbox, you **CANNOT** see or control the user's interactive desktop (Session 1). If you try to start `service.exe` using a Python script directly, Windows will isolate it in your sandbox (Session 0). It will launch a *new, hidden* WeChat instance that loses user configurations and requires re-login every time. 
+**Architecture Note for Sandboxed Environments:**
+If you are running inside a restricted sandbox, you cannot see or control the user's interactive desktop (Session 1). If you try to start `service.exe` using a Python script directly, Windows will isolate it in your sandbox (Session 0). It will launch a *new, hidden* WeChat instance that loses user configurations and requires re-login every time. 
 
 **Therefore, the standard operating procedure (SOP) for elegantly starting the service is:**
 
@@ -43,14 +43,14 @@ If you are running inside a restricted sandbox, you **CANNOT** see or control th
        print(f"Already exists: {bat_path}")
    ```
    
-   🛑 **ABSOLUTE RULE FOR AGENT**: You are **STRICTLY FORBIDDEN** from executing `start_server.py`, the `.bat` file, or the `.ps1` file yourself using your shell tools. Do NOT use `subprocess`, `os.system`, or `powershell -Command` to start the server. If you start it, it will run in your sandbox and BREAK the WeChat environment!
+   **Important Execution Note**: Please do not execute `start_server.py`, the `.bat` file, or the `.ps1` file directly using shell tools (like `subprocess`, `os.system`, or `powershell -Command`). Running them in a sandboxed environment may cause the service to run incorrectly. Instead, generate the `.bat` file for the user to execute manually.
 
-3. **Prompt User & YIELD:** Tell the user:
+3. **Prompt User**: Tell the user:
    > "由于沙箱隔离限制，我无法直接在后台启动服务。我已在您的桌面生成了 `启动微信RPA.bat`。**请您手动双击桌面上的 `启动微信RPA.bat` 来启动服务**。启动成功后，请回复我 '已启动'。"
    
-   **STOP HERE.** You MUST yield the conversation back to the user. Do NOT write a polling loop. Do NOT proceed until the user replies that they have started it.
+   After providing the instructions, please pause and wait for the user to confirm they have started the service. Avoid using polling loops to check the status automatically.
 
-4. **Proceed:** Once the user confirms they started it, verify the API is reachable, then continue with the user's request. **Crucially**, after the service successfully starts, you MUST proactively inform the user that a Visual UI is available:
+4. **Proceed:** Once the user confirms they started it, verify the API is reachable, then continue with the user's request. After the service successfully starts, please proactively inform the user that a Visual UI is available:
    > "微信 RPA 服务已成功启动。如果您需要进行复杂配置或查看历史记录，我也可以帮您打开可视化前端 UI 界面。需要现在打开吗？"
 
 ## 3. UI Interaction & Software Activation
@@ -65,7 +65,7 @@ If the user has not activated the software yet, the Agent can autonomously activ
 The skill includes a pre-built frontend UI (located in the `webot/` directory) that is automatically served by the backend at `http://127.0.0.1:9922/`.
 When the user asks to "打开UI", "配置界面", or "使用前端":
 
-1. **Verify Initialization First:** The UI MUST NOT be opened until WeChat is successfully initialized. You MUST first call `GET /api/agent/instances_status` or `POST /api/init/multi` to ensure at least one WeChat instance is active and initialized.
+1. **Verify Initialization First:** The UI should only be opened after WeChat is successfully initialized. Please call `GET /api/agent/instances_status` or `POST /api/init/multi` to ensure at least one WeChat instance is active and initialized.
    - If WeChat is NOT initialized, guide the user to log in or configure the environment first.
 2. **Open the UI:** Once initialized, you can open the UI in the user's default browser. Since you might be in a sandbox, you should attempt to use Python to launch the browser on the host:
    ```python
@@ -80,7 +80,7 @@ When the user asks to "打开UI", "配置界面", or "使用前端":
 Alternatively, the Agent can inform the user:
 > "The WeChat RPA service has started. Please provide your Activation Code, and I will activate the device for you. You can also open http://127.0.0.1:9922/ to enter it manually."
 
-If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, the Agent MUST automatically fix it by:
+If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, please help the user fix it by:
 1. Asking the user: "WeChat environment is not configured. Can I close your WeChat and automatically configure it?"
 2. If approved, call `POST /api/system/wechat41/auto_config`.
 3. Wait 5 seconds, then call `POST /api/init/multi` again.
@@ -90,19 +90,19 @@ If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, the Age
 Once the service is running, activated, and the user is logged in, the Agent can control WeChat via HTTP REST APIs.
 
 - **Base URL**: `http://127.0.0.1:9922`
-- **Authentication**: You MUST include the header `X-API-Key: yoko_test` in all API requests.
+- **Authentication**: Please include the header `X-API-Key: yoko_test` in all API requests.
 - **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
 
-### ⚠️ CRITICAL: Bypass System Proxy for localhost
+### Bypass System Proxy for localhost
 
-If the user's machine has a system proxy enabled (e.g., VPNs running on ports like `33210` or `7890`), Agent API calls to `127.0.0.1` might be intercepted and fail!
-You MUST explicitly tell your HTTP client to bypass proxies for `127.0.0.1`.
+If the user's machine has a system proxy enabled (e.g., VPNs running on ports like `33210` or `7890`), API calls to `127.0.0.1` might be intercepted and fail.
+Please ensure the HTTP client is configured to bypass proxies for `127.0.0.1`.
 
-### ⚠️ CRITICAL: Chinese Encoding in API Requests (Mojibake/乱码)
+### Chinese Encoding in API Requests
 
-If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it will CORRUPT Chinese characters because PowerShell 5.1 defaults to ISO-8859-1 for string bodies, resulting in mojibake (乱码) in WeChat.
+If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it may cause encoding issues with Chinese characters because PowerShell 5.1 defaults to ISO-8859-1 for string bodies.
 
-**You MUST use one of the following methods for API calls containing Chinese to ensure UTF-8 AND Proxy Bypass:**
+**It is recommended to use one of the following methods for API calls containing Chinese to ensure correct UTF-8 encoding and proxy bypass:**
 
 1. **Method 1 (Recommended)**: Use Python `requests` inline (explicitly disabling proxies):
    ```bash
@@ -113,7 +113,7 @@ If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it wi
    chcp 65001
    curl.exe --noproxy "*" -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"中文\",\"message\":\"测试\"}"
    ```
-3. **Method 3**: If you must use `Invoke-RestMethod` in PowerShell, you MUST encode the body as UTF-8 bytes first:
+3. **Method 3**: If using `Invoke-RestMethod` in PowerShell, please encode the body as UTF-8 bytes first:
    ```powershell
    $body = [System.Text.Encoding]::UTF8.GetBytes('{"user":"中文","message":"测试"}')
    Invoke-RestMethod -Uri "http://127.0.0.1:9922/api/chat/send_message" -Method POST -Headers @{"X-API-Key"="yoko_test"; "Content-Type"="application/json"} -Body $body
@@ -128,12 +128,12 @@ If an API returns:
   "action_required": "OPEN_UI"
 }
 ```
-Stop your execution and tell the user to open the UI (`http://127.0.0.1:9922/`) to resolve the issue.
+Please inform the user to open the UI (`http://127.0.0.1:9922/`) to resolve the issue.
 
 ## 5. Progressive Documentation (Agent Knowledge Base)
 
 This skill provides a set of progressive disclosure documents to help you understand complex operational scenarios (like auto-adding friends, posting moments, config schemas, etc.).
-**Do NOT guess how complex features work.** When a user asks you to perform a specific task (e.g., "帮我开启自动通过好友" or "设置群发任务"), you MUST read the index document first to find the relevant SOP or schema:
+When a user asks to perform a specific task (e.g., "帮我开启自动通过好友" or "设置群发任务"), please refer to the index document first to find the relevant SOP or schema:
 
 - **Read `docs/index.md`** to discover available SOPs and configuration schemas for advanced features.
 - Follow the instructions in the specific `docs/*.md` file before calling the related APIs.

@@ -84,6 +84,16 @@ If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, please 
 1. Asking the user: "WeChat environment is not configured. Can I close your WeChat and automatically configure it?"
 2. If approved, call `POST /api/system/wechat41/auto_config`.
 3. Wait 5 seconds, then call `POST /api/init/multi` again.
+4. **Crucial Step for Sandbox Agents**: During auto-configuration, Windows Narrator (屏幕阅读器) will be launched to enable UI automation. Since it starts in your sandbox, the user can hear it but cannot close it from their taskbar. **You must proactively tell the user**:
+   > "微信环境配置完成。微信启动成功后，如果您听到屏幕阅读器（讲述人）的声音且无法关闭，请告诉我 **'关闭讲述人'**，我将为您关闭它。"
+
+### 3.3 Handling "Close Narrator" (关闭讲述人)
+When the user asks you to close the narrator (屏幕阅读器/讲述人), you should find and kill the `Narrator.exe` process using shell commands.
+For example, you can run:
+```bat
+taskkill /F /IM Narrator.exe /T
+```
+Or check for processes related to "屏幕阅读器" and terminate them to stop the voice.
 
 ## 4. API Usage (Agent Control)
 

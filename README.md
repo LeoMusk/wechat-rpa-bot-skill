@@ -28,11 +28,11 @@
    git clone https://github.com/LeoMusk/wechat-rpa-bot-skill.git
    cd wechat-rpa-bot-skill
 2. **下载核心服务组件 (`service.exe`)**：
-   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.0` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
+   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.1` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
 
    *Agent 可以使用类似以下的命令自动下载（注意替换为最新的 release URL）：*
    ```bash
-   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
+   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.1/service.exe
    ```
 
 3. **安装 Python 依赖（用于启动脚本）**：

@@ -146,5 +146,9 @@ curl.exe -X POST http://127.0.0.1:9922/api/chat/send_message \
 ---
 
 📚 微信RPA机器人操作文档
-- <a href="https://n2b8xxdgjx.feishu.cn/wiki/DgLlwBoV4ioFbpkG8LDcz6VjnAf" target="_blank">[微信RPA机器人操作文档]</a>
+- <a href="https://n2b8xxdgjx.feishu.cn/wiki/DgLlwBoV4ioFbpkG8LDcz6VjnAf" target="_blank">微信RPA机器人操作文档</a>
 - <a href="https://www.yokoagi.com/" target="_blank">微信AI销售机器人官网</a>
+
+## 🍤YoBot私域AI龙虾
+
+私域AI龙虾助理YoBot已深度集成该RPA服务👉<a href="https://yobot.yokoagi.com/" target="_blank">YoBot官网</a>

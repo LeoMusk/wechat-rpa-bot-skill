@@ -11,9 +11,9 @@ This skill allows any Agent (like OpenClaw) to act as a WeChat assistant by hook
 
 If the user wants to install this skill or hasn't set it up yet:
 1. Ensure the user is on **Windows** and has **WeChat Desktop** installed.
-2. The Agent MUST download the core binary `service.exe` from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) (e.g., `v1.7.1`) and place it in the root directory of this skill.
+2. The Agent MUST download the core binary `service.exe` from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) (e.g., `v1.7.0`) and place it in the root directory of this skill.
    ```bash
-   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.1/service.exe
+   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
    ```
 3. If running from source, ensure `python` is installed.
 4. The project uses an **Activation Code (License Code)** system instead of tokens. You do NOT need to configure a `.env` file.
@@ -88,7 +88,7 @@ If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, please 
    > "微信环境配置完成。微信启动成功后，如果您听到屏幕阅读器（讲述人）的声音且无法关闭，请告诉我 **'关闭讲述人'**，我将为您关闭它。"
 
 ### 3.3 Handling "Close Narrator" (关闭讲述人)
-When the user asks you to close the narrator (屏幕阅读器/讲述人), you should find and kill the `Narrator.exe` process using shell commands.
+When the user asks you to close the narrator (屏幕阅读器), you should find and kill the `Narrator.exe` process using shell commands.
 For example, you can run:
 ```bat
 taskkill /F /IM Narrator.exe /T

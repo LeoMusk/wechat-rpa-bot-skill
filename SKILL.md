@@ -140,10 +140,27 @@ The RPA service runs as a background daemon — it keeps running even after the 
 - The user says the service is using too much memory or wants to free up resources.
 - Before a planned system shutdown or restart.
 
-**How to guide the user:**
-> "微信 RPA 服务目前仍在后台运行。如果您已使用完毕，可以双击桌面上的 `停止微信RPA.bat` 来关闭服务，释放系统资源。"
+#### ⚠️ Sandbox Cannot Kill User-Session Processes — CRITICAL
+
+**If you are running inside a sandbox (e.g., QClaw), you CANNOT kill `service.exe` processes that were started by the user interactively (via the desktop `.bat` file).**
+
+This is a Windows Session Isolation security boundary:
+- Desktop `.bat` → `service.exe` runs in **Session 1** (user's interactive desktop)
+- Sandbox agent → runs in **Session 0** or a restricted session
+- `taskkill /F /PID <pid>` across sessions = **Access Denied** — this will ALWAYS fail silently
+
+**Therefore:**
+- **NEVER attempt to kill `service.exe` using `taskkill`, `stop_server.py`, or PowerShell `Stop-Process` from within the sandbox.** It will fail and waste time.
+- The **only reliable way to stop the service** is to ask the user to run `停止微信RPA.bat` on their desktop (which runs in Session 1 and has the correct permissions).
+
+**How to guide the user when stop is needed:**
+> "由于沙箱权限限制，我无法直接关闭在您桌面上启动的 RPA 服务。请双击桌面上的 `停止微信RPA.bat` 来安全关闭服务，完成后请告诉我。"
 
 **If the stop bat doesn't exist on the desktop** (e.g., first time), regenerate it using the Python code in Section 2.1 Step 2.
+
+#### Avoid Running Two Instances
+
+Two `service.exe` instances can arise when the agent mistakenly believes the service is down (due to API blocking during a task — see Section 5) and starts a second one. **Always check the port first before starting a new instance.** If two instances exist and both are unkillable from sandbox, instruct the user to open Task Manager, end both `service.exe` tasks, then re-run `启动微信RPA.bat`.
 
 **If the user is experiencing port 9922 occupied on next startup:**
 The start bat already handles this — it calls `stop_server.py` before starting, which cleans up any orphaned processes. Just ask the user to run `启动微信RPA.bat` again.

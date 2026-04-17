@@ -36,13 +36,16 @@ def kill_by_pid_file():
 
 def kill_by_port():
     stopped = False
-    for proc in psutil.process_iter(['pid', 'name', 'connections']):
+    for proc in psutil.process_iter(['pid', 'name']):
         try:
-            for conn in proc.info.get('connections', []) or []:
+            for conn in proc.net_connections():
                 if getattr(conn, 'status', '') == 'LISTEN' and getattr(conn.laddr, 'port', -1) == PORT:
                     print(f"Killing process {proc.info['name']} (PID: {proc.info['pid']}) on port {PORT}...")
-                    subprocess.run(f"taskkill /F /T /PID {proc.info['pid']}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    stopped = True
+                    result = subprocess.run(f"taskkill /F /T /PID {proc.info['pid']}", shell=True, capture_output=True)
+                    if result.returncode != 0:
+                        print(f"  taskkill failed (Access Denied?): {result.stderr.decode(errors='ignore').strip()}")
+                    else:
+                        stopped = True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
     return stopped

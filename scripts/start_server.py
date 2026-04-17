@@ -15,9 +15,9 @@ PID_FILE = os.path.join(_project_root, ".rpa_service.pid")
 
 def kill_process_on_port(port):
     """Find and kill the process listening on the specified port."""
-    for proc in psutil.process_iter(['pid', 'name', 'connections']):
+    for proc in psutil.process_iter(['pid', 'name']):
         try:
-            for conn in proc.info.get('connections', []) or []:
+            for conn in proc.net_connections():
                 if getattr(conn, 'status', '') == 'LISTEN' and getattr(conn.laddr, 'port', -1) == port:
                     print(f"Killing orphan process {proc.info['name']} (PID: {proc.info['pid']}) on port {port}")
                     subprocess.run(f"taskkill /F /T /PID {proc.info['pid']}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

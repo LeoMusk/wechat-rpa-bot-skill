@@ -1,149 +1,226 @@
 ---
 name: wechat-rpa-bot
-description: Control and automate WeChat operations via RPA. Use this skill when the user wants to start the RPA server, complete WeChat login, open the UI, or send WeChat messages.
+description: Control and automate WeChat operations via RPA. Use this skill when the user wants to start the RPA server, complete WeChat login, open the UI, send WeChat messages, or manage the RPA service lifecycle.
 ---
 
 # WeChat RPA Bot Skill
 
-This skill allows any Agent (like OpenClaw) to act as a WeChat assistant by hooking into the YokoWebot RPA backend. It provides autonomous installation, startup, activation, and API-based control over WeChat Desktop.
+This skill allows any Agent (like OpenClaw) to act as a WeChat assistant by hooking into the YokoWebot RPA backend. It provides autonomous installation, startup, activation, initialization, and API-based control over WeChat Desktop.
+
+---
 
 ## 1. Installation & Setup (For the Agent)
 
 If the user wants to install this skill or hasn't set it up yet:
-1. Ensure the user is on **Windows** and has **WeChat Desktop** installed.
-2. The Agent MUST download the core binary `service.exe` from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) (e.g., `v1.7.0`) and place it in the root directory of this skill.
+1. Ensure the user is on **Windows** and has **WeChat Desktop 4.1.7** installed (not newer, not older).
+   - Version check: open WeChat → Help (帮助) → About (关于) → confirm version is **4.1.7**
+   - If wrong version, download from: https://n2b8xxdgjx.feishu.cn/wiki/Nbauw9HWsihsQ7kgjYPcfZSCnKb
+2. Download the core binary `service.exe` from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) and place it in the root directory of this skill.
    ```bash
    curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
    ```
-3. If running from source, ensure `python` is installed.
-4. The project uses an **Activation Code (License Code)** system instead of tokens. You do NOT need to configure a `.env` file.
-
-## 2. Starting and Activating the RPA Service
-
-**Architecture Note for Sandboxed Environments:**
-If you are running inside a restricted sandbox, you cannot see or control the user's interactive desktop (Session 1). If you try to start `service.exe` using a Python script directly, Windows will isolate it in your sandbox (Session 0). It will launch a *new, hidden* WeChat instance that loses user configurations and requires re-login every time. 
-
-**Therefore, the standard operating procedure (SOP) for elegantly starting the service is:**
-
-1. **Check Connection First:** Always try to ping `http://127.0.0.1:9922/api/agent/backend_status` first. If it succeeds, the service is already running on the host desktop. Skip to Step 4.
-2. **Generate Desktop Launcher (`.bat`):** If the connection fails, generate a batch script directly on the user's Windows Desktop so they can launch it interactively.
-   *Example Python snippet to run (ONLY GENERATE, DO NOT EXECUTE):*
-   ```python
-   import os
-   desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-   bat_path = os.path.join(desktop, "启动微信RPA.bat")
-   
-   # Only create if it doesn't exist to avoid annoying the user
-   if not os.path.exists(bat_path):
-       skill_dir = os.path.abspath(".")
-       with open(bat_path, "w", encoding="gbk") as f:
-           f.write(f"@echo off\nchcp 65001\necho 正在启动微信 RPA 服务，请稍候...\ncd /d {skill_dir}\nset WEBOT_BACKEND_MODE=1\nset HEADLESS_MODE=1\nset DISABLE_WEBVIEW=1\nset NO_BROWSER=1\npython scripts\\start_server.py --no-ui --channel-id agent_generic\npause")
-       print(f"Created: {bat_path}")
-   else:
-       print(f"Already exists: {bat_path}")
+3. Install Python dependencies (if running from source):
+   ```bash
+   pip install psutil requests
    ```
-   
-   **Important Execution Note**: Please do not execute `start_server.py`, the `.bat` file, or the `.ps1` file directly using shell tools (like `subprocess`, `os.system`, or `powershell -Command`). Running them in a sandboxed environment may cause the service to run incorrectly. Instead, generate the `.bat` file for the user to execute manually.
+4. The project uses an **Activation Code** system — no `.env` file needed. Activation codes are obtained from: **www.yokoagi.com**
 
-3. **Prompt User**: Tell the user:
-   > "由于沙箱隔离限制，我无法直接在后台启动服务。我已在您的桌面生成了 `启动微信RPA.bat`。**请您手动双击桌面上的 `启动微信RPA.bat` 来启动服务**。启动成功后，请回复我 '已启动'。"
-   
-   After providing the instructions, please pause and wait for the user to confirm they have started the service. Avoid using polling loops to check the status automatically.
+---
 
-4. **Proceed:** Once the user confirms they started it, verify the API is reachable, then continue with the user's request. After the service successfully starts, please proactively inform the user that a Visual UI is available:
-   > "微信 RPA 服务已成功启动。如果您需要进行复杂配置或查看历史记录，我也可以帮您打开可视化前端 UI 界面。需要现在打开吗？"
+## 2. Service Lifecycle
 
-## 3. UI Interaction & Software Activation
+### 2.1 Starting the RPA Service
 
-### 3.1 Software Activation
-If the user has not activated the software yet, the Agent can autonomously activate it by asking the user for their **Activation Code**:
-1. The Agent calls `GET /api/license/machine-code` to retrieve the device's machine code.
-2. The Agent asks the user for their Activation Code.
-3. The Agent calls `POST /api/license/activate` with the `activation_code` and `machine_code`.
+**Architecture Note — Sandbox Isolation:**
+If you are running inside a restricted sandbox (e.g., QClaw), you cannot access the user's interactive desktop (Session 1). Spawning `service.exe` directly from the sandbox will place it in an isolated session where it cannot see WeChat.
 
-### 3.2 Mounting and Opening the Frontend UI
-The skill includes a pre-built frontend UI (located in the `webot/` directory) that is automatically served by the backend at `http://127.0.0.1:9922/`.
-When the user asks to "打开UI", "配置界面", or "使用前端":
+**The correct SOP (Standard Operating Procedure) is:**
 
-1. **Verify Initialization First:** The UI should only be opened after WeChat is successfully initialized. Please call `GET /api/agent/instances_status` or `POST /api/init/multi` to ensure at least one WeChat instance is active and initialized.
-   - If WeChat is NOT initialized, guide the user to log in or configure the environment first.
-2. **Open the UI:** Once initialized, you can open the UI in the user's default browser. Since you might be in a sandbox, you should attempt to use Python to launch the browser on the host:
-   ```python
-   import webbrowser
-   # Try to open the UI in the default browser
-   webbrowser.open('http://127.0.0.1:9922/')
+**Step 1 — Check if already running:**
+Always ping `http://127.0.0.1:9922/docs` first (disable proxy for localhost). If it responds, the service is already running — skip to Section 2.2 (Initialization).
+
+**Step 2 — Generate desktop launcher scripts:**
+If the service is not running, generate **both** `启动微信RPA.bat` AND `停止微信RPA.bat` on the user's Desktop. Generate both at the same time so the user has both tools ready.
+
+> **IMPORTANT: Only GENERATE these files — do NOT execute them yourself.**
+
+*Python code to generate both scripts (run this code, do not execute the bat files):*
+```python
+import os
+
+desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+skill_dir = os.path.abspath(".")  # adjust to the actual skill directory path
+
+# --- Start bat ---
+start_bat = os.path.join(desktop, "启动微信RPA.bat")
+if not os.path.exists(start_bat):
+    with open(start_bat, "w", encoding="gbk") as f:
+        f.write(
+            "@echo off\n"
+            "chcp 65001\n"
+            "echo 正在清理旧的 RPA 进程...\n"
+            f"cd /d {skill_dir}\n"
+            "python scripts\\stop_server.py\n"
+            "echo 正在启动微信 RPA 服务，请稍候...\n"
+            "set WEBOT_BACKEND_MODE=1\n"
+            "set HEADLESS_MODE=1\n"
+            "set DISABLE_WEBVIEW=1\n"
+            "set NO_BROWSER=1\n"
+            "python scripts\\start_server.py\n"
+            "pause\n"
+        )
+    print(f"Created: {start_bat}")
+
+# --- Stop bat ---
+stop_bat = os.path.join(desktop, "停止微信RPA.bat")
+if not os.path.exists(stop_bat):
+    with open(stop_bat, "w", encoding="gbk") as f:
+        f.write(
+            "@echo off\n"
+            "chcp 65001\n"
+            "echo 正在停止微信 RPA 服务...\n"
+            f"cd /d {skill_dir}\n"
+            "python scripts\\stop_server.py\n"
+            "echo 服务已停止！\n"
+            "pause\n"
+        )
+    print(f"Created: {stop_bat}")
+```
+
+**Step 3 — Prompt the user:**
+> "由于沙箱隔离限制，我已在您的桌面生成了两个脚本：
+> - `启动微信RPA.bat` — 启动服务（已内置自动清理旧进程逻辑）
+> - `停止微信RPA.bat` — 服务使用完毕后关闭
+>
+> **请先双击桌面上的 `启动微信RPA.bat` 来启动服务**，启动成功后请回复我"已启动"。"
+
+**Step 4 — Verify and proceed:**
+After the user confirms, ping `http://127.0.0.1:9922/docs` (with proxy disabled for localhost) to verify the service is reachable, then proceed to Section 2.2.
+
+---
+
+### 2.2 WeChat Initialization (Two-Step SOP)
+
+**CRITICAL RULES — read carefully:**
+- `auto_config` is a **destructive operation** (it kills WeChat and restarts it). **NEVER** call `POST /api/system/wechat41/auto_config` unless Step 1 below explicitly returns `ENV_NOT_CONFIGURED`.
+- Always call `POST /api/init/multi` **without** auto_config first (Step 1).
+
+**Standard initialization flow:**
+
+```
+Step 1: POST /api/init/multi
+        Headers: X-API-Key: yoko_test
+        Body: {}
+
+        → success (instances returned)       → Done. WeChat is initialized.
+        → error_code: UNAUTHORIZED           → Go to Section 3 (Activation).
+        → code: ENV_NOT_CONFIGURED           → Go to Step 2 below.
+        → other error                        → Report to user, suggest restarting service.
+
+Step 2: (Only if ENV_NOT_CONFIGURED)
+        Ask user: "微信环境尚未配置，我需要短暂关闭并重启您的微信来完成配置，是否继续？"
+        
+        If user agrees:
+          a. POST /api/system/wechat41/auto_config
+             (WeChat will be killed and restarted — this is expected)
+          b. Wait 5 seconds for WeChat to restart
+          c. Warn the user:
+             "配置过程中 Windows 讲述人（屏幕阅读器）可能会短暂启动并发出声音，
+              这是正常现象。配置完成后如果仍有声音，请告诉我"关闭讲述人"，
+              我会帮您关闭。"
+          d. POST /api/init/multi again → should return success now.
+```
+
+### 2.3 Stopping the Service
+
+The RPA service runs as a background daemon — it keeps running even after the Agent conversation ends or the browser UI is closed. This is by design, but you should help the user stop it when appropriate.
+
+**When to suggest stopping the service:**
+- The user explicitly says they're done with WeChat / don't need it anymore.
+- The user says the service is using too much memory or wants to free up resources.
+- Before a planned system shutdown or restart.
+
+**How to guide the user:**
+> "微信 RPA 服务目前仍在后台运行。如果您已使用完毕，可以双击桌面上的 `停止微信RPA.bat` 来关闭服务，释放系统资源。"
+
+**If the stop bat doesn't exist on the desktop** (e.g., first time), regenerate it using the Python code in Section 2.1 Step 2.
+
+**If the user is experiencing port 9922 occupied on next startup:**
+The start bat already handles this — it calls `stop_server.py` before starting, which cleans up any orphaned processes. Just ask the user to run `启动微信RPA.bat` again.
+
+---
+
+## 3. Activation
+
+If `POST /api/init/multi` returns `UNAUTHORIZED`, the software needs to be activated.
+
+1. Call `GET /api/license/machine-code` to retrieve the device's machine code.
+2. Tell the user:
+   > "软件尚未激活。请前往 **www.yokoagi.com** 获取激活码，获取后告诉我，我将为您完成自动激活。"
+3. After the user provides the Activation Code, call `POST /api/license/activate` with:
+   ```json
+   { "activation_code": "<user_provided>", "machine_code": "<from_step_1>" }
    ```
-3. **Fallback Link:** Always provide a clickable Markdown link in your response in case the programmatic launch fails:
-   > "我已经为您准备好了可视化配置界面，如果浏览器没有自动弹出，请直接点击下方链接打开：
-   > 👉 [打开微信 RPA 控制台](http://127.0.0.1:9922/)"
+4. On success, call `POST /api/init/multi` again to complete initialization.
 
-Alternatively, the Agent can inform the user:
-> "The WeChat RPA service has started. Please provide your Activation Code, and I will activate the device for you. You can also open http://127.0.0.1:9922/ to enter it manually."
+---
 
-If the `start_server.py` output or any API returns `ENV_NOT_CONFIGURED`, please help the user fix it by:
-1. Asking the user: "WeChat environment is not configured. Can I close your WeChat and automatically configure it?"
-2. If approved, call `POST /api/system/wechat41/auto_config`.
-3. Wait 5 seconds, then call `POST /api/init/multi` again.
-4. **Crucial Step for Sandbox Agents**: During auto-configuration, Windows Narrator (屏幕阅读器) will be launched to enable UI automation. Since it starts in your sandbox, the user can hear it but cannot close it from their taskbar. **You must proactively tell the user**:
-   > "微信环境配置完成。微信启动成功后，如果您听到屏幕阅读器（讲述人）的声音且无法关闭，请告诉我 **'关闭讲述人'**，我将为您关闭它。"
+## 4. Opening the Frontend UI
 
-### 3.3 Handling "Close Narrator" (关闭讲述人)
-When the user asks you to close the narrator (屏幕阅读器), you should find and kill the `Narrator.exe` process using shell commands.
-For example, you can run:
+The skill includes a pre-built frontend UI served at `http://127.0.0.1:9922/`.
+
+**Open UI only after WeChat is successfully initialized** (Section 2.2 must return success first). Before initialization, the UI shows "微信掉线" and is non-functional.
+
+When the user asks to open the UI:
+```python
+import webbrowser
+webbrowser.open('http://127.0.0.1:9922/')
+```
+
+Always also provide a fallback link in the response:
+> "可视化控制台已为您准备好：👉 [打开微信 RPA 控制台](http://127.0.0.1:9922/)
+> 若浏览器未自动弹出，请手动点击上方链接。"
+
+### Handling "Close Narrator" (关闭讲述人)
+When the user reports hearing Narrator (屏幕阅读器) sounds and wants it closed:
 ```bat
 taskkill /F /IM Narrator.exe /T
 ```
-Or check for processes related to "屏幕阅读器" and terminate them to stop the voice.
 
-## 4. API Usage (Agent Control)
+---
 
-Once the service is running, activated, and the user is logged in, the Agent can control WeChat via HTTP REST APIs.
+## 5. API Usage
+
+Once initialized, control WeChat via HTTP REST APIs.
 
 - **Base URL**: `http://127.0.0.1:9922`
-- **Authentication**: Please include the header `X-API-Key: yoko_test` in all API requests.
-- **API Reference**: Read `references/openapi.json` for details on available endpoints (e.g., `POST /api/chat/send_message`, `POST /api/agent/mass_sending`, etc.).
+- **Auth Header**: `X-API-Key: yoko_test` (required on all requests)
+- **API Reference**: See `references/openapi.json` for all endpoints.
 
 ### Bypass System Proxy for localhost
-
-If the user's machine has a system proxy enabled (e.g., VPNs running on ports like `33210` or `7890`), API calls to `127.0.0.1` might be intercepted and fail.
-Please ensure the HTTP client is configured to bypass proxies for `127.0.0.1`.
+If the user has a system proxy (VPN on port 33210, 7890, etc.), localhost calls may be intercepted. Always disable proxy when calling `127.0.0.1`.
 
 ### Chinese Encoding in API Requests
-
-If you use Windows PowerShell to call the API (e.g., `Invoke-RestMethod`), it may cause encoding issues with Chinese characters because PowerShell 5.1 defaults to ISO-8859-1 for string bodies.
-
-**It is recommended to use one of the following methods for API calls containing Chinese to ensure correct UTF-8 encoding and proxy bypass:**
-
-1. **Method 1 (Recommended)**: Use Python `requests` inline (explicitly disabling proxies):
-   ```bash
-   python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'中文','message':'测试'}, proxies={'http': None, 'https': None})"
-   ```
-2. **Method 2**: Use `curl.exe` explicitly and set `--noproxy`:
-   ```bash
-   chcp 65001
-   curl.exe --noproxy "*" -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"中文\",\"message\":\"测试\"}"
-   ```
-3. **Method 3**: If using `Invoke-RestMethod` in PowerShell, please encode the body as UTF-8 bytes first:
-   ```powershell
-   $body = [System.Text.Encoding]::UTF8.GetBytes('{"user":"中文","message":"测试"}')
-   Invoke-RestMethod -Uri "http://127.0.0.1:9922/api/chat/send_message" -Method POST -Headers @{"X-API-Key"="yoko_test"; "Content-Type"="application/json"} -Body $body
-   ```
-
-### Handling Errors
-If an API returns:
-```json
-{
-  "success": false,
-  "error_code": "WECHAT_NOT_LOGGED_IN",
-  "action_required": "OPEN_UI"
-}
+**Recommended — Python requests (auto UTF-8, proxy disabled):**
+```bash
+python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'联系人昵称','message':'消息内容'}, proxies={'http': None, 'https': None})"
 ```
-Please inform the user to open the UI (`http://127.0.0.1:9922/`) to resolve the issue.
 
-## 5. Progressive Documentation (Agent Knowledge Base)
+**Alternative — curl.exe:**
+```bash
+chcp 65001
+curl.exe --noproxy "*" -X POST http://127.0.0.1:9922/api/chat/send_message -H "Content-Type: application/json" -H "X-API-Key: yoko_test" -d "{\"user\":\"联系人昵称\",\"message\":\"消息内容\"}"
+```
 
-This skill provides a set of progressive disclosure documents to help you understand complex operational scenarios (like auto-adding friends, posting moments, config schemas, etc.).
-When a user asks to perform a specific task (e.g., "帮我开启自动通过好友" or "设置群发任务"), please refer to the index document first to find the relevant SOP or schema:
+**Avoid PowerShell `Invoke-RestMethod`** for Chinese content — it defaults to ISO-8859-1 encoding and will cause garbled characters.
 
-- **Read `docs/index.md`** to discover available SOPs and configuration schemas for advanced features.
-- Follow the instructions in the specific `docs/*.md` file before calling the related APIs.
+### Error Handling
+If an API returns `WECHAT_NOT_LOGGED_IN`, open the UI (`http://127.0.0.1:9922/`) and ask the user to log in.
+
+---
+
+## 6. Progressive Documentation (Agent Knowledge Base)
+
+For complex tasks (auto-add friends, mass sending, moment posting, config schemas):
+- **Read `docs/index.md`** first to discover available SOPs.
+- Follow the specific `docs/*.md` file before calling related APIs.

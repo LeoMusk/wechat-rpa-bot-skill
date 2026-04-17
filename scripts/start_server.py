@@ -9,6 +9,10 @@ import socket
 PORT = 9922
 API_KEY = "yoko_test" # Fixed key for local agent API access
 
+# PID file path at project root to track the running service process
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PID_FILE = os.path.join(_project_root, ".rpa_service.pid")
+
 def kill_process_on_port(port):
     """Find and kill the process listening on the specified port."""
     for proc in psutil.process_iter(['pid', 'name', 'connections']):
@@ -16,18 +20,42 @@ def kill_process_on_port(port):
             for conn in proc.info.get('connections', []) or []:
                 if getattr(conn, 'status', '') == 'LISTEN' and getattr(conn.laddr, 'port', -1) == port:
                     print(f"Killing orphan process {proc.info['name']} (PID: {proc.info['pid']}) on port {port}")
-                    # On Windows, taskkill /F /T is more reliable to kill process trees
                     subprocess.run(f"taskkill /F /T /PID {proc.info['pid']}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
 
+def kill_by_pid_file():
+    """Kill the previously recorded service process via PID file."""
+    if not os.path.exists(PID_FILE):
+        return
+    try:
+        with open(PID_FILE, 'r') as f:
+            pid = int(f.read().strip())
+        print(f"Found PID file, killing previous service process (PID: {pid})...")
+        subprocess.run(f"taskkill /F /T /PID {pid}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"PID file cleanup skipped: {e}")
+    finally:
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+
+def save_pid_file(pid):
+    """Save the service process PID for later cleanup."""
+    try:
+        with open(PID_FILE, 'w') as f:
+            f.write(str(pid))
+    except Exception as e:
+        print(f"Warning: could not write PID file: {e}")
+
 def cleanup_old_processes():
-    """Clean up any existing service.exe or server.py processes."""
+    """Clean up any existing service processes before starting a new one."""
     print("Cleaning up old processes...")
+    # Step 1: try PID file (most precise, avoids killing unrelated service.exe)
+    kill_by_pid_file()
+    # Step 2: scan port 9922 for any surviving process
     kill_process_on_port(PORT)
-    
-    # Removed dangerous 'taskkill /IM service.exe' because it kills Trae/IDE background services!
-    
     # Give OS a moment to release ports and file handles
     time.sleep(2)
 
@@ -91,6 +119,7 @@ def start_service():
         sys.exit(1)
         
     print(f"Server started with PID: {process.pid}")
+    save_pid_file(process.pid)
     return process
 
 def wait_for_health_check():

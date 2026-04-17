@@ -214,6 +214,61 @@ curl.exe --noproxy "*" -X POST http://127.0.0.1:9922/api/chat/send_message -H "C
 
 **Avoid PowerShell `Invoke-RestMethod`** for Chinese content — it defaults to ISO-8859-1 encoding and will cause garbled characters.
 
+### Long-Running Tasks & API Blocking — CRITICAL
+
+**The RPA service runs all automation tasks on the main thread. This means the HTTP server is completely unresponsive while a task is executing. This is NORMAL, not a bug.**
+
+**Two very different states that look similar:**
+
+| Symptom | What it means | What to do |
+|---|---|---|
+| `Connection refused` / `port not listening` | Service is DOWN | Safe to restart |
+| `Request hangs / times out` | Service is BUSY executing a task | **Wait — do NOT restart** |
+
+**How to distinguish them in Python:**
+```python
+import socket, requests
+
+def service_state():
+    """Returns 'down', 'busy', or 'ready'."""
+    s = socket.socket()
+    s.settimeout(2)
+    try:
+        s.connect(('127.0.0.1', 9922))
+        s.close()
+    except ConnectionRefusedError:
+        return 'down'   # Port not listening → service truly crashed
+    except Exception:
+        return 'down'
+    finally:
+        s.close()
+    # Port is open, now try a quick HTTP check
+    try:
+        r = requests.get('http://127.0.0.1:9922/docs',
+                         timeout=5, proxies={'http': None, 'https': None})
+        return 'ready'
+    except requests.exceptions.Timeout:
+        return 'busy'   # Port open but HTTP hung → task in progress
+    except Exception:
+        return 'busy'
+```
+
+**Expected wait times for common tasks (do NOT interrupt):**
+
+| Task | Expected duration |
+|---|---|
+| Send message | 5–30 seconds |
+| Auto-config (`auto_config`) | 30–90 seconds |
+| Add friend / pass friend request | 30–120 seconds |
+| Post Moment | 30–120 seconds |
+| Mass send / batch operations | Up to 10 minutes |
+
+**Rules:**
+- **NEVER kill or restart the service solely because an API call hangs or times out.** Check the port first.
+- Only restart if `service_state()` returns `'down'` (connection refused).
+- If `'busy'`, wait and retry after the expected duration has passed. Inform the user that a task is in progress.
+- If a task has been running longer than **15 minutes** and the port is still open, only then should you ask the user whether to force-stop.
+
 ### Error Handling
 If an API returns `WECHAT_NOT_LOGGED_IN`, open the UI (`http://127.0.0.1:9922/`) and ask the user to log in.
 

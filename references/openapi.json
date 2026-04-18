@@ -71,13 +71,15 @@
         "required": ["content", "files"],
         "properties": {
           "content": {
-            "type": "string"
+            "type": "string",
+            "description": "The text content of the moment."
           },
           "files": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "List of absolute file paths for images or video to upload."
           }
         }
       },
@@ -89,25 +91,31 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "List of tags. All friends/groups with these tags will be targeted."
           },
           "targets": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "List of specific friend nicknames or group names to target."
           },
           "greeting_group": {
-            "type": "string"
+            "type": "string",
+            "description": "The name of the greeting/message group to use for content."
           },
           "schedule_time": {
-            "type": "string"
+            "type": "string",
+            "description": "Optional execution time (YYYY-MM-DD HH:mm). If omitted, executes immediately."
           },
           "batch_size": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Batch size for grouping tasks. Default is 10."
           },
           "account_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Optional account ID if multiple WeChat instances are running."
           }
         }
       },
@@ -116,10 +124,13 @@
         "required": ["type", "account_id"],
         "properties": {
           "type": {
-            "type": "string"
+            "type": "string",
+            "enum": ["friend", "group"],
+            "description": "The type of contacts to sync. 'friend' for personal contacts, 'group' for group chats."
           },
           "account_id": {
-            "type": "string"
+            "type": "string",
+            "description": "The target WeChat account ID."
           }
         }
       },
@@ -128,7 +139,8 @@
         "required": ["enabled"],
         "properties": {
           "enabled": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Set to true to enable the feature, false to disable."
           }
         }
       }
@@ -137,8 +149,8 @@
   "paths": {
     "/api/agent/backend_status": {
       "get": {
-        "summary": "Get backend running status",
-        "description": "Check if the RPA backend server is running and get its full status including tasks and features.",
+        "summary": "Get RPA backend running status",
+        "description": "Check if the RPA backend server is running and get its full status including tasks and features. Use this to verify the RPA service is operational before calling other APIs.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -154,7 +166,7 @@
     "/api/agent/instances_status": {
       "get": {
         "summary": "Get WeChat instances status",
-        "description": "Check the status of all WeChat instances. Used by the Agent to determine if WeChat needs initialization.",
+        "description": "Check the status of all WeChat instances. Returns initialization status and account info for each detected WeChat instance. Use this to determine if WeChat needs initialization or is already bound to RPA.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -170,7 +182,7 @@
     "/api/system/wechat41/auto_config": {
       "post": {
         "summary": "Auto-configure WeChat Environment",
-        "description": "DANGEROUS: Kills WeChat and injects environment variables/debug ports. ONLY call this if /api/init/multi returns ENV_NOT_CONFIGURED.",
+        "description": "DANGEROUS: Kills WeChat and injects environment variables/debug ports. ONLY call this if /api/init/multi returns ENV_NOT_CONFIGURED. Default behavior is NOT to use this. ONLY set auto_config=true if previous initialize call returned ENV_NOT_CONFIGURED. Usage of auto_config=true will kill the WeChat process.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -185,8 +197,8 @@
     },
     "/api/init/multi": {
       "post": {
-        "summary": "Initialize multiple WeChat instances",
-        "description": "Initializes all active WeChat instances and retrieves their account info.",
+        "summary": "Initialize RPA service and bind to WeChat",
+        "description": "Initializes all active WeChat instances and retrieves their account info. Execution logic: 1. If NOT called in this session, call it FIRST. 2. If already called, SKIP it. 3. If skipping causes other API tools to fail, call this AGAIN to recover. Returns ENV_NOT_CONFIGURED if WeChat environment needs auto-configuration.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -217,8 +229,8 @@
     },
     "/api/license/machine-code": {
       "get": {
-        "summary": "Get Machine Code",
-        "description": "Get the device's machine code, which is required for license activation.",
+        "summary": "Get Machine Code for activation",
+        "description": "Get the device's machine code, which is required for license activation. Use this first when software needs activation. Provide this code to the user to obtain an activation code from www.yokoagi.com.",
         "responses": {
           "200": {
             "description": "Returns the machine code."
@@ -229,7 +241,7 @@
     "/api/license/activate": {
       "post": {
         "summary": "Activate License",
-        "description": "Activate the RPA software using an activation code and machine code.",
+        "description": "Activate the RPA software using an activation code and machine code. Call this after user provides the activation code obtained from www.yokoagi.com. Requires machine_code from /api/license/machine-code endpoint.",
         "requestBody": {
           "required": true,
           "content": {
@@ -253,7 +265,7 @@
     "/api/license/verify": {
       "get": {
         "summary": "Verify License",
-        "description": "Verify if the current license is active and valid.",
+        "description": "Verify if the current license is active and valid. Returns validation status and expiration info if applicable.",
         "responses": {
           "200": {
             "description": "Returns the validation status."
@@ -263,8 +275,8 @@
     },
     "/api/chat/send_message": {
       "post": {
-        "summary": "Send Message",
-        "description": "Send a text message to a specific user or group. The 'user' parameter accepts contact remark name, nickname, or WeChat ID. No need to query contact list beforehand — the RPA will automatically find the matching contact.",
+        "summary": "Send text message to friend/group via RPA",
+        "description": "Send a text message to a specific user or group. The 'user' parameter accepts contact remark name, nickname, or WeChat ID. No need to query contact list beforehand — the RPA will automatically find the matching contact. Use this when user wants to send a text message to a WeChat friend or group.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -289,8 +301,8 @@
     },
     "/api/agent/chat/send_file": {
       "post": {
-        "summary": "Send File",
-        "description": "Send a file to a specific user or group. The 'user' parameter accepts contact remark name, nickname. No need to query contact list beforehand.",
+        "summary": "Send file (img/video/doc) to friend/group via RPA",
+        "description": "Send a file (image, video, document) to a specific user or group. The 'user' parameter accepts contact remark name, nickname. No need to query contact list beforehand. Use this when user wants to send a file to a WeChat friend or group.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -315,8 +327,8 @@
     },
     "/api/agent/post_moment": {
       "post": {
-        "summary": "Post Moment",
-        "description": "Post a WeChat moment with text and optional files.",
+        "summary": "Post WeChat Moment with text/images via RPA",
+        "description": "Post a WeChat moment with text content and optional images or video. Use this when user wants to publish a post to their WeChat Moments (朋友圈).",
         "security": [
           {
             "ApiKeyAuth": []
@@ -341,8 +353,8 @@
     },
     "/api/chat/messages/{sessionName}": {
       "get": {
-        "summary": "Get Chat Messages",
-        "description": "Retrieve recent chat messages for a specific session.",
+        "summary": "Fetch REAL-TIME messages from running WeChat via RPA",
+        "description": "Fetch real-time messages from a running WeChat session via RPA. This is the source of truth for active/latest chats. Use this when user wants to get the most recent messages from a specific chat session. If session name is unknown, ask user.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -375,8 +387,8 @@
     },
     "/api/agent/mass_sending": {
       "post": {
-        "summary": "Mass Sending",
-        "description": "Create a mass sending task to send messages to multiple targets or tags.",
+        "summary": "Mass send messages via RPA",
+        "description": "Create a mass sending task to send messages to multiple targets or tags. Supports tags filtering, specific targets, scheduling, and batch processing. Use this when user wants to send bulk messages to multiple WeChat contacts or groups.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -401,8 +413,8 @@
     },
     "/api/agent/tasks": {
       "get": {
-        "summary": "Get Tasks",
-        "description": "Get the list of active or recent RPA tasks.",
+        "summary": "Get scheduled RPA tasks",
+        "description": "Get the full list of tasks currently scheduled in the RPA scheduler. Returns active or recent RPA tasks including mass sending, auto-add friend, and other scheduled operations. Use this when user wants to check what tasks are currently scheduled or running.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -417,8 +429,8 @@
     },
     "/api/contact/sync": {
       "post": {
-        "summary": "Sync Contacts",
-        "description": "Sync WeChat contacts or groups.",
+        "summary": "Sync contacts or groups from WeChat to RPA service",
+        "description": "Sync contacts or groups from WeChat to RPA service. Typically used during auto-configuration or when contacts need to be refreshed. Use type='friend' for personal contacts, type='group' for group chats.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -443,8 +455,8 @@
     },
     "/api/config/{configType}": {
       "get": {
-        "summary": "Get Config",
-        "description": "Get a specific configuration.",
+        "summary": "Get RPA service configuration",
+        "description": "Get a specific RPA service configuration (e.g., agents, reply_strategy_v2, greeting_config). If reading RPA API configs, please understand the config schema first. Use this when user wants to read current configuration settings.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -467,8 +479,8 @@
         }
       },
       "post": {
-        "summary": "Update Config",
-        "description": "Update a specific configuration.",
+        "summary": "Update RPA service configuration via API",
+        "description": "Update a specific RPA service configuration via API. You MUST understand the required parameters before calling. ALWAYS use Read-Modify-Write pattern - fetch current config, modify the needed fields, then send the complete updated config. Use this when user wants to update configuration settings.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -503,8 +515,8 @@
     },
     "/api/agent/features_status": {
       "get": {
-        "summary": "Get Features Status",
-        "description": "Get the status of AI features (AI Sales, AI Moment, Auto Add Friend).",
+        "summary": "Get the status of AI features",
+        "description": "Get the status of AI features (AI Sales, AI Moment, Auto Add Friend). Returns current enabled/disabled state of all AI automation features. Use this when user wants to check which AI features are currently active.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -520,7 +532,7 @@
     "/api/chat/multi-monitor/start": {
       "post": {
         "summary": "Start AI Sales Monitor",
-        "description": "Start the AI Sales multi-monitor feature.",
+        "description": "Start the AI Sales multi-monitor feature. This enables automatic AI response to incoming WeChat messages based on configured reply strategies. Use this when user wants to enable AI auto-reply functionality.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -536,7 +548,7 @@
     "/api/chat/monitor/stop": {
       "post": {
         "summary": "Stop AI Sales Monitor",
-        "description": "Stop the AI Sales monitor feature.",
+        "description": "Stop the AI Sales monitor feature. This disables automatic AI response to incoming WeChat messages. Use this when user wants to disable AI auto-reply functionality.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -552,7 +564,7 @@
     "/api/moment/toggle-auto-comment": {
       "post": {
         "summary": "Toggle AI Moment Auto Comment",
-        "description": "Enable or disable AI Moment auto comment feature.",
+        "description": "Enable or disable AI Moment auto comment feature. When enabled, AI will automatically generate and post comments on friends' Moments. Use the 'enabled' parameter to turn on/off.",
         "security": [
           {
             "ApiKeyAuth": []
@@ -578,7 +590,7 @@
     "/api/friend/auto-add-new/toggle": {
       "post": {
         "summary": "Toggle Auto Add Friend",
-        "description": "Enable or disable Auto Add Friend feature.",
+        "description": "Enable or disable Auto Add Friend feature. When enabled, RPA will automatically accept incoming friend requests based on configured rules. Use the 'enabled' parameter to turn on/off.",
         "security": [
           {
             "ApiKeyAuth": []

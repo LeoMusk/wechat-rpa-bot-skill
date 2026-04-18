@@ -1,0 +1,37 @@
+{
+    "theme": {
+      "primary": "#2c3e50",
+      "menuBackground": "#2c3e50",
+      "menuTextColor": "#ffffff",
+      "menuActiveTextColor": "#ffd04b",
+      "menuHoverBackground": "#34495e"
+    },
+    "navbar": {
+      "items": [
+        {
+          "index": "welcome",
+          "text": "欢迎"
+        },
+        {
+          "index": "ai-chat",
+          "text": "AI销冠"
+        },
+        {
+          "index": "customer-management",
+          "text": "客户管理"
+        },
+        {
+          "index": "moments",
+          "text": "朋友圈"
+        },
+        {
+          "index": "auto-add",
+          "text": "自动化SOP"
+        },
+        {
+          "index": "settings",
+          "text": "配置"
+        }
+      ]
+    }
+  }

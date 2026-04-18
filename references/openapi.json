@@ -1,0 +1,605 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WeChat RPA Bot API",
+    "version": "1.1.0",
+    "description": "API for OpenClaw/Agent to interact with the local WeChat RPA service. Includes initialization, authentication, messaging, moments, and configuration."
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "MultiInstanceRequest": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "integer"
+          }
+        }
+      },
+      "ActivationRequest": {
+        "type": "object",
+        "required": ["activation_code", "machine_code"],
+        "properties": {
+          "activation_code": {
+            "type": "string"
+          },
+          "machine_code": {
+            "type": "string"
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "required": ["user", "message"],
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "联系人微信备注名、昵称或微信号。可以直接使用用户提供的名称，无需提前查询或转换。RPA会根据该名称自动在通讯录中查找匹配的好友。"
+          },
+          "message": {
+            "type": "string",
+            "description": "要发送的消息内容"
+          }
+        }
+      },
+      "SendFileRequest": {
+        "type": "object",
+        "required": ["user", "file_path"],
+        "properties": {
+          "user": {
+            "type": "string",
+            "description": "联系人微信备注名、昵称或微信号。可以直接使用用户提供的名称，无需提前查询或转换。"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "要发送的文件的完整路径"
+          },
+          "account_id": {
+            "type": "string",
+            "description": "可选，指定发送账号的ID"
+          }
+        }
+      },
+      "PostMomentRequest": {
+        "type": "object",
+        "required": ["content", "files"],
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MassSendingRequest": {
+        "type": "object",
+        "required": ["greeting_group"],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "greeting_group": {
+            "type": "string"
+          },
+          "schedule_time": {
+            "type": "string"
+          },
+          "batch_size": {
+            "type": "integer"
+          },
+          "account_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SyncContactsRequest": {
+        "type": "object",
+        "required": ["type", "account_id"],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "account_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ToggleFeatureRequest": {
+        "type": "object",
+        "required": ["enabled"],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/agent/backend_status": {
+      "get": {
+        "summary": "Get backend running status",
+        "description": "Check if the RPA backend server is running and get its full status including tasks and features.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the status of the backend."
+          }
+        }
+      }
+    },
+    "/api/agent/instances_status": {
+      "get": {
+        "summary": "Get WeChat instances status",
+        "description": "Check the status of all WeChat instances. Used by the Agent to determine if WeChat needs initialization.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a list of WeChat instances and their initialization status."
+          }
+        }
+      }
+    },
+    "/api/system/wechat41/auto_config": {
+      "post": {
+        "summary": "Auto-configure WeChat Environment",
+        "description": "DANGEROUS: Kills WeChat and injects environment variables/debug ports. ONLY call this if /api/init/multi returns ENV_NOT_CONFIGURED.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auto-configuration successful. WeChat will be restarted."
+          }
+        }
+      }
+    },
+    "/api/init/multi": {
+      "post": {
+        "summary": "Initialize multiple WeChat instances",
+        "description": "Initializes all active WeChat instances and retrieves their account info.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiInstanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Initialization successful."
+          },
+          "400": {
+            "description": "No WeChat instances detected."
+          },
+          "401": {
+            "description": "Software not activated."
+          }
+        }
+      }
+    },
+    "/api/license/machine-code": {
+      "get": {
+        "summary": "Get Machine Code",
+        "description": "Get the device's machine code, which is required for license activation.",
+        "responses": {
+          "200": {
+            "description": "Returns the machine code."
+          }
+        }
+      }
+    },
+    "/api/license/activate": {
+      "post": {
+        "summary": "Activate License",
+        "description": "Activate the RPA software using an activation code and machine code.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activation successful."
+          },
+          "500": {
+            "description": "Activation failed."
+          }
+        }
+      }
+    },
+    "/api/license/verify": {
+      "get": {
+        "summary": "Verify License",
+        "description": "Verify if the current license is active and valid.",
+        "responses": {
+          "200": {
+            "description": "Returns the validation status."
+          }
+        }
+      }
+    },
+    "/api/chat/send_message": {
+      "post": {
+        "summary": "Send Message",
+        "description": "Send a text message to a specific user or group. The 'user' parameter accepts contact remark name, nickname, or WeChat ID. No need to query contact list beforehand — the RPA will automatically find the matching contact.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent successfully."
+          }
+        }
+      }
+    },
+    "/api/agent/chat/send_file": {
+      "post": {
+        "summary": "Send File",
+        "description": "Send a file to a specific user or group. The 'user' parameter accepts contact remark name, nickname. No need to query contact list beforehand.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendFileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File sent successfully."
+          }
+        }
+      }
+    },
+    "/api/agent/post_moment": {
+      "post": {
+        "summary": "Post Moment",
+        "description": "Post a WeChat moment with text and optional files.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostMomentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moment posted successfully."
+          }
+        }
+      }
+    },
+    "/api/chat/messages/{sessionName}": {
+      "get": {
+        "summary": "Get Chat Messages",
+        "description": "Retrieve recent chat messages for a specific session.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns chat messages."
+          }
+        }
+      }
+    },
+    "/api/agent/mass_sending": {
+      "post": {
+        "summary": "Mass Sending",
+        "description": "Create a mass sending task to send messages to multiple targets or tags.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MassSendingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mass sending task created successfully."
+          }
+        }
+      }
+    },
+    "/api/agent/tasks": {
+      "get": {
+        "summary": "Get Tasks",
+        "description": "Get the list of active or recent RPA tasks.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the list of tasks."
+          }
+        }
+      }
+    },
+    "/api/contact/sync": {
+      "post": {
+        "summary": "Sync Contacts",
+        "description": "Sync WeChat contacts or groups.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncContactsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contacts synced successfully."
+          }
+        }
+      }
+    },
+    "/api/config/{configType}": {
+      "get": {
+        "summary": "Get Config",
+        "description": "Get a specific configuration.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "configType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the configuration."
+          }
+        }
+      },
+      "post": {
+        "summary": "Update Config",
+        "description": "Update a specific configuration.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "configType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated successfully."
+          }
+        }
+      }
+    },
+    "/api/agent/features_status": {
+      "get": {
+        "summary": "Get Features Status",
+        "description": "Get the status of AI features (AI Sales, AI Moment, Auto Add Friend).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns feature statuses."
+          }
+        }
+      }
+    },
+    "/api/chat/multi-monitor/start": {
+      "post": {
+        "summary": "Start AI Sales Monitor",
+        "description": "Start the AI Sales multi-monitor feature.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI Sales Monitor started."
+          }
+        }
+      }
+    },
+    "/api/chat/monitor/stop": {
+      "post": {
+        "summary": "Stop AI Sales Monitor",
+        "description": "Stop the AI Sales monitor feature.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI Sales Monitor stopped."
+          }
+        }
+      }
+    },
+    "/api/moment/toggle-auto-comment": {
+      "post": {
+        "summary": "Toggle AI Moment Auto Comment",
+        "description": "Enable or disable AI Moment auto comment feature.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFeatureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI Moment toggled."
+          }
+        }
+      }
+    },
+    "/api/friend/auto-add-new/toggle": {
+      "post": {
+        "summary": "Toggle Auto Add Friend",
+        "description": "Enable or disable Auto Add Friend feature.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFeatureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auto Add Friend toggled."
+          }
+        }
+      }
+    }
+  }
+}

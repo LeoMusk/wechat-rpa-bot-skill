@@ -220,8 +220,14 @@ If the user has a system proxy (VPN on port 33210, 7890, etc.), localhost calls 
 ### Chinese Encoding in API Requests
 **Recommended — Python requests (auto UTF-8, proxy disabled):**
 ```bash
+# 单微信实例（常见场景）
 python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'联系人昵称','message':'消息内容'}, proxies={'http': None, 'https': None})"
+
+# 多微信实例（指定发送方账号）
+python -c "import requests; requests.post('http://127.0.0.1:9922/api/chat/send_message', headers={'X-API-Key':'yoko_test'}, json={'user':'联系人昵称','message':'消息内容','account_id':'wxid_xxx'}, proxies={'http': None, 'https': None})"
 ```
+
+> `user` 是**接收方**联系人的备注名/昵称；`account_id` 是**发送方**微信实例标识，仅多实例时需要传入。
 
 **Alternative — curl.exe:**
 ```bash

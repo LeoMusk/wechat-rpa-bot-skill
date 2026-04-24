@@ -12,6 +12,7 @@ except ImportError:
 PORT = 9922
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PID_FILE = os.path.join(_project_root, ".rpa_service.pid")
+LISTENER_PID_FILE = os.path.join(os.path.expanduser("~"), ".yoko", "ws_listener.pid")
 
 
 def kill_by_pid_file():
@@ -51,8 +52,28 @@ def kill_by_port():
     return stopped
 
 
+def stop_ws_listener():
+    """Stop the WebSocket listener process via its PID file."""
+    if not os.path.exists(LISTENER_PID_FILE):
+        return
+    try:
+        with open(LISTENER_PID_FILE) as f:
+            pid = int(f.read().strip())
+        print(f"Stopping WebSocket listener (PID: {pid})...")
+        subprocess.run(f"taskkill /F /T /PID {pid}", shell=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"Listener stop skipped: {e}")
+    finally:
+        try:
+            os.remove(LISTENER_PID_FILE)
+        except Exception:
+            pass
+
+
 def stop_service():
     print("Stopping WeChat RPA service...")
+    stop_ws_listener()
     stopped_pid = kill_by_pid_file()
     stopped_port = kill_by_port()
 

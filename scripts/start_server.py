@@ -177,6 +177,43 @@ def initialize_rpa():
         print(f"Failed to call initialization API: {e}")
         return False
 
+LISTENER_PID_FILE = os.path.join(os.path.expanduser("~"), ".yoko", "ws_listener.pid")
+
+
+def start_ws_listener():
+    """Start the WebSocket agent listener as a detached background process."""
+    listener_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ws_listener.py")
+    if not os.path.exists(listener_script):
+        print("Warning: ws_listener.py not found, skipping WebSocket listener startup.")
+        return None
+
+    # Kill any stale listener first
+    if os.path.exists(LISTENER_PID_FILE):
+        try:
+            with open(LISTENER_PID_FILE) as f:
+                old_pid = int(f.read().strip())
+            subprocess.run(f"taskkill /F /T /PID {old_pid}", shell=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+
+    flags = 0x00000008 if sys.platform == "win32" else 0  # DETACHED_PROCESS
+    startupinfo = None
+    if sys.platform == "win32":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    proc = subprocess.Popen(
+        [sys.executable, listener_script],
+        creationflags=flags,
+        startupinfo=startupinfo,
+        close_fds=True,
+    )
+    print(f"WebSocket listener started (PID: {proc.pid})")
+    return proc
+
+
 if __name__ == "__main__":
     # Ensure psutil and requests are installed
     try:
@@ -191,16 +228,25 @@ if __name__ == "__main__":
     process = start_service()
     if wait_for_health_check():
         initialize_rpa()
+        start_ws_listener()
         print("\n" + "="*50)
         print("RPA Service is now RUNNING in the background.")
-        print(f"Agent API Endpoint: http://127.0.0.1:{PORT}")
-        print("Frontend UI: http://127.0.0.1:9922/")
+        print(f"Agent API Endpoint:    http://127.0.0.1:{PORT}")
+        print(f"WebSocket Event API:   http://127.0.0.1:9923")
+        print("Frontend UI:           http://127.0.0.1:9922/")
+        print("="*50)
+        print()
+        print(">>> NEXT STEP: HEARTBEAT SETUP REQUIRED <<<")
+        print("The WebSocket event listener is running but no agent has")
+        print("registered for heartbeat monitoring yet.")
+        print()
+        print("Immediately call:")
+        print("  POST http://127.0.0.1:9923/setup/heartbeat")
+        print('  Body: {"intervalSeconds": 60}')
+        print()
+        print("The response contains the exact heartbeat prompt to paste")
+        print("into your agent platform (OpenClaw / QClaw Heartbeat settings).")
         print("="*50 + "\n")
-        print("You can now instruct the user to open the Frontend UI in their browser to complete login or configuration.")
-        
-        # Keep the script running so the agent knows it's active, 
-        # or we can exit and leave the service running in the background.
-        # Leaving it running in background is better for agents.
         sys.exit(0)
     else:
         if process:

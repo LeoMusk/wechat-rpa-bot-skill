@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-这是一个专为 AI 智能体（如 [OpenClaw](https://github.com/openclaw/openclaw)、[YoBot私域龙虾](https://yobot.yokoagi.com)、[QClaw](https://qclaw.qq.com/) 等）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
+这是一个专为 AI 智能体（如 [OpenClaw](https://github.com/openclaw/openclaw)、[YoBot私域龙虾](https://yobot.yokoagi.com)、[QClaw](https://qclaw.qq.com/) 等，推荐使用OpenClaw或者YoBot,QClaw默认在沙箱运行，管理rpa后台服务会更复杂，需要人工手动管理RPA后台服务的生命周期）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
 
 该技能允许任何 AI 智能体通过 HTTP REST API 自主安装、配置、启动和控制本地微信桌面端实例。它弥合了大语言模型（LLM）推理与真实世界微信操作之间的鸿沟。
 
@@ -34,11 +34,11 @@
    git clone https://github.com/LeoMusk/wechat-rpa-bot-skill.git
    cd wechat-rpa-bot-skill
 3. **下载核心服务组件 (`service.exe`)**：
-   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.0` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
+   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.7` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
 
    *Agent 可以使用类似以下的命令自动下载（注意替换为最新的 release URL）：*
    ```bash
-   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
+   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.7/service.exe
    ```
 
 4. **安装 Python 依赖（用于启动脚本）**：

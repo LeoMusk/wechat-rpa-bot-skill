@@ -363,6 +363,104 @@ If an API returns `WECHAT_NOT_LOGGED_IN`, open the UI (`http://127.0.0.1:9922/`)
 
 ---
 
+### Contact List Export — CRITICAL RULES
+
+**Two separate endpoints — use the right one:**
+
+| Endpoint | Speed | Returns data? | When to use |
+|---|---|---|---|
+| `GET /api/contacts` | Instant | ✅ Yes | Reading, filtering, exporting contacts |
+| `POST /api/contact/sync` | ~2 min | ❌ No | Only when contacts are known to be stale |
+
+**⚠️ NEVER call `/api/contact/sync` just to read contacts.** It blocks WeChat for ~2 minutes and returns no data.
+
+#### Reading Contact Data — `GET /api/contacts`
+
+Supports optional query params: `tag`, `keyword`, `account_id`.
+
+```python
+import requests
+
+proxies = {"http": None, "https": None}
+
+# All contacts
+r = requests.get("http://127.0.0.1:9922/api/contacts",
+                 headers={"X-API-Key": "yoko_test"},
+                 proxies=proxies)
+contacts = r.json()
+# Returns: [{"name": "张三", "wxid": "xxx", "tags": ["AI微信机器人"], "is_new": true}, ...]
+
+# Filter by tag
+r = requests.get("http://127.0.0.1:9922/api/contacts?tag=AI微信机器人",
+                 headers={"X-API-Key": "yoko_test"},
+                 proxies=proxies)
+```
+
+#### Exporting to Excel — Write a Script File (NOT `python -c`)
+
+**⚠️ On Windows, NEVER use `python -c "..."` with Chinese characters or multi-line code.** The Windows shell (cmd.exe / PowerShell) will corrupt non-ASCII bytes in the argument, causing silent failures.
+
+**Correct pattern:** save contacts to a JSON file, write a `.py` script file, then run it.
+
+```python
+import requests, json, os, textwrap
+
+proxies = {"http": None, "https": None}
+
+# Step 1: fetch contacts
+contacts = requests.get(
+    "http://127.0.0.1:9922/api/contacts",
+    headers={"X-API-Key": "yoko_test"},
+    proxies=proxies
+).json()
+
+workspace = os.path.join(os.path.expanduser("~"), ".yokoagent", "workspace")
+os.makedirs(workspace, exist_ok=True)
+
+# Step 2: save JSON
+json_path = os.path.join(workspace, "contacts.json")
+with open(json_path, "w", encoding="utf-8") as f:
+    json.dump(contacts, f, ensure_ascii=False, indent=2)
+
+# Step 3: write Excel script (Chinese column names as \u escapes — safe on any shell)
+excel_path = os.path.join(workspace, "wechat_contacts.xlsx")
+script_path = os.path.join(workspace, "gen_excel.py")
+script = textwrap.dedent(f"""\
+    # /// script
+    # requires-python = ">=3.8"
+    # dependencies = ["pandas", "openpyxl"]
+    # ///
+    # -*- coding: utf-8 -*-
+    import json, pandas as pd
+    json_path = r'{json_path}'
+    excel_path = r'{excel_path}'
+    with open(json_path, encoding="utf-8") as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
+    if "tags" in df.columns:
+        df["tags"] = df["tags"].apply(lambda x: ", ".join(x) if isinstance(x, list) else (x or ""))
+    col_map = {{"name": "\\u6635\\u79f0", "wxid": "\\u5fae\\u4fe1\\u53f7",
+               "tags": "\\u6807\\u7b7e", "is_new": "\\u662f\\u5426\\u65b0\\u597d\\u53cb"}}
+    df = df.rename(columns={{k: v for k, v in col_map.items() if k in df.columns}})
+    df.to_excel(excel_path, index=False, engine="openpyxl")
+    print(f"OK: {{len(df)}} contacts -> {{excel_path}}")
+""")
+with open(script_path, "w", encoding="utf-8") as f:
+    f.write(script)
+
+# Step 4: run via `uv run` (auto-installs pandas + openpyxl if missing)
+import subprocess
+result = subprocess.run(["uv", "run", script_path], capture_output=True, text=True)
+print(result.stdout or result.stderr)
+```
+
+**Why `uv run script.py` and not `python -c`?**
+- `uv run script.py` reads the file from disk — no shell encoding issues
+- The `# /// script` block tells uv to auto-install `pandas` and `openpyxl` if not present
+- Chinese column names are stored as `\u` escapes inside the file — never on the command line
+
+---
+
 ## 6. Progressive Documentation (Agent Knowledge Base)
 
 For complex tasks (auto-add friends, mass sending, moment posting, config schemas):

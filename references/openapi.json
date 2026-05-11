@@ -138,6 +138,28 @@
           }
         }
       },
+      "ContactItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Contact display name (nickname or remark)."
+          },
+          "wxid": {
+            "type": "string",
+            "description": "WeChat ID of the contact."
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of tags assigned to the contact."
+          },
+          "is_new": {
+            "type": "boolean",
+            "description": "Whether this contact was newly added."
+          }
+        }
+      },
       "ToggleFeatureRequest": {
         "type": "object",
         "required": ["enabled"],
@@ -431,10 +453,61 @@
         }
       }
     },
+    "/api/contacts": {
+      "get": {
+        "summary": "Get the already-synced contact list",
+        "description": "Query the contact list that has already been synced into the RPA service. Instant — no WeChat interaction required. Supports optional filtering by tag, keyword, or account. Use this to read or export contacts; do NOT call /api/contact/sync just to read contacts (sync is slow and only needed when data is stale).",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter contacts by tag name (e.g. '广告', 'AI微信机器人')."
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Filter contacts by name keyword (partial match)."
+          },
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "WeChat account ID to query. Omit to use the default active account."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns array of contact objects.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ContactItem" }
+                },
+                "example": [
+                  { "name": "张三", "wxid": "zhangsan_wxid", "tags": ["AI微信机器人"], "is_new": true },
+                  { "name": "李四", "wxid": "lisi_wxid", "tags": [], "is_new": false }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/contact/sync": {
       "post": {
         "summary": "Sync contacts or groups from WeChat to RPA service",
-        "description": "Sync contacts or groups from WeChat to RPA service. Typically used during auto-configuration or when contacts need to be refreshed. Use type='friend' for personal contacts, type='group' for group chats.",
+        "description": "Re-sync contacts directly from live WeChat into the RPA service. SLOW (~2 min) and returns no contact data — only use when contacts are known to be stale or during initial setup. To READ the contact list, call GET /api/contacts instead.",
         "security": [
           {
             "ApiKeyAuth": []

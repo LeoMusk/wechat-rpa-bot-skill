@@ -10,10 +10,11 @@
 
 **核心前提**：RPA 的「智能体列表」(`agents` 配置) 里必须存在一个**能生成朋友圈评语的智能体**。该智能体的 `botId` 就是朋友圈配置要传的 `agentId`。如果用户从未绑定过这样的智能体，开启朋友圈就会报错 `缺少必传参数 interactionMode 或 agentId，且未找到历史配置`。本 SOP 的主体工作就是自动帮用户备好这个智能体。
 
-**启动接口**：
-- **Endpoint**: `POST /api/moment/toggle-auto-comment`（RPA API，Base URL `http://127.0.0.1:9922`，需 `X-API-Key`）
-- **Body**: `{ "enabled": true, ...settings }` —— settings 字段**平铺**在与 `enabled` 同级，**不要**嵌套进 `settings` 对象。
-- **必传**：`interactionMode`、`agentId`。其余字段不传则使用历史配置 (`history_config`) 或系统默认值。
+**启动方式**：通过本技能的 **`wechat_toggle_ai_moment`** 工具开启 / 关闭。
+- 开启：`wechat_toggle_ai_moment({ enabled: true, interactionMode, agentId, ...其余可选项 })`。
+- 关闭：`wechat_toggle_ai_moment({ enabled: false })`。
+- **必传**：`interactionMode`、`agentId`。其余可选字段不传则使用历史配置或系统默认值。
+- ⚠️ **严禁**用 `shell_exec` / `curl` 手动请求 `/api/moment/toggle-auto-comment` 接口——`X-API-Key` 由工具自动处理，手动 curl 必然失败。开启动作**只能**通过 `wechat_toggle_ai_moment` 工具完成。
 
 ---
 
@@ -119,19 +120,19 @@
 
 ## Step 6: 启动 AI 朋友圈
 
-调用启动接口：
+调用 **`wechat_toggle_ai_moment`** 工具开启任务：
 
-- **Endpoint**: `POST http://127.0.0.1:9922/api/moment/toggle-auto-comment`（带 `X-API-Key`）
-- **Body**:
-  ```json
-  {
-    "enabled": true,
-    "interactionMode": "<Step 5 用户选择的模式>",
-    "agentId": "<Step 4 记住的 botId / apiKey>"
-  }
-  ```
+```
+wechat_toggle_ai_moment({
+  "enabled": true,
+  "interactionMode": "<Step 5 用户选择的模式>",
+  "agentId": "<Step 4 记住的 botId / apiKey>"
+})
+```
+
 - 返回 `success: true` 即开启成功，向用户汇报：「已为您自动绑定朋友圈智能体并开启 AI 朋友圈（互动模式：xxx）」。
-- 若仍报错，将错误信息原样呈现给用户，并对照本 SOP 检查是哪一步未完成。
+- ⚠️ **不要**用 `shell_exec` / `curl` 调接口；开启动作只能通过 `wechat_toggle_ai_moment` 工具完成。
+- 若工具返回报错，将错误信息原样呈现给用户，并对照本 SOP 检查是哪一步未完成。
 
 ---
 
@@ -148,9 +149,9 @@ FireFlow 相关步骤（Step 3 取 apiKey / 复制工作流）**任一步失败*
 
 ---
 
-## 附录：接口配置参数 (settings) 字段说明
+## 附录：wechat_toggle_ai_moment 参数说明
 
-仅当用户主动要求调整时才设置；否则不传，走默认值。
+以下为 `wechat_toggle_ai_moment` 工具的参数。仅当用户主动要求调整时才设置；否则不传，走默认值。
 
 | 参数名 | 类型 | 含义 | 默认 / 可选值 |
 | :--- | :--- | :--- | :--- |

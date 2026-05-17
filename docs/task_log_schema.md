@@ -15,6 +15,8 @@
 - `friend_request.jsonl`：自动通过好友执行日志
 - `mass_sending.jsonl`：群发/推送消息执行日志
 
+> 📌 此处 `task_type` 属于**执行日志域**（关注「过去执行了什么」），与 `task_schema` 中**调度器任务域**（关注「将来要执行什么」）的 `task_type` 是两套不同枚举，不完全重合。
+
 ## 2. 统一日志数据结构模型 (Base Schema)
 
 每一行 JSON 日志都包含以下标准外壳字段：

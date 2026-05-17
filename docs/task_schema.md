@@ -96,6 +96,8 @@
 *   `auto_reply` - 自动回复任务
 *   `sync_contacts` - 同步通讯录任务
 
+> 📌 此处 `task_type` 属于**调度器任务域**（关注「将来要执行什么」），与 `task_log_schema` 中**执行日志域**（关注「过去执行了什么」）的 `task_type` 是两套不同枚举，不完全重合：调度域独有 `sync_contacts`，日志域独有 `add_friend` / `moment_interaction` / `friend_request`。
+
 ### 4.2 任务状态 (`status`)
 *   `scheduled` - **已调度**，等待触发。这是正常的排队状态。
 *   `running` - **执行中**，任务正在执行。

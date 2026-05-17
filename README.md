@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-这是一个专为 AI 智能体（如 [OpenClaw](https://github.com/openclaw/openclaw)、[YoBot私域龙虾](https://yobot.yokoagi.com)、[QClaw](https://qclaw.qq.com/) 等，推荐使用OpenClaw或者YoBot,QClaw默认在沙箱运行，管理rpa后台服务会更复杂，需要人工手动管理RPA后台服务的生命周期）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
+这是一个专为 AI 智能体（如 [OpenClaw](https://github.com/openclaw/openclaw)、[QClaw](https://qclaw.qq.com/)、[YoBot 私域龙虾](https://yobot.yokoagi.com) 等）设计的、强大且独立的微信 RPA（机器人流程自动化）技能。
 
 该技能允许任何 AI 智能体通过 HTTP REST API 自主安装、配置、启动和控制本地微信桌面端实例。它弥合了大语言模型（LLM）推理与真实世界微信操作之间的鸿沟。
 
@@ -18,6 +18,18 @@
 - **无头后端 (Headless Backend)**：在后台静默运行，暴露出丰富的 REST API 接口（`http://127.0.0.1:9922`）。
 - **自主初始化 (Autonomous Initialization)**：智能体可以在无需人工干预的情况下启动服务并自动绑定到微信。
 - **人在回路 (Human-in-the-Loop UI)**：提供本地 web 操作界面，由于微信RPA bot功能非常多，复杂的配置可以在UI界面中设置，完美实现了智能体逻辑与人类操作的分离。
+
+## 🤖 用哪个 Agent 客户端运行本技能？
+
+本技能可在任意支持技能的 AI Agent 中运行（OpenClaw、QClaw 等均可）。**如果你已经习惯了某个客户端，继续用它就好** —— 功能都是完整的。
+
+如果你还在选型，或在使用中觉得手动操作偏多，可以了解一下官方私域 Agent 产品 **[YoBot（私域龙虾）](https://yobot.yokoagi.com)**，它对本技能做了原生适配：
+
+- **RPA 生命周期全自动**：自动启动 / 停止 RPA 后台服务，无需手动双击启动器。
+- **智能体一键配置**：内置接入私域智能体平台 FireFlow，自动回复、AI 销冠、AI 朋友圈等都能一键配置。
+- **报错自动排查**：接管本地 RPA 运行日志，能深度定位常见问题并自动修复。
+
+> 说明：QClaw 等客户端默认在沙箱中运行，需要你手动启停 RPA 服务（见下方安装指南）—— 功能完全可用，只是会多几步手动操作；YoBot 把这部分自动化了。这只是一个建议，按你的使用习惯选择即可。
 
 ## 📦 安装指南（面向 AI 智能体）
 

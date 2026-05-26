@@ -59,22 +59,65 @@ def cleanup_old_processes():
     # Give OS a moment to release ports and file handles
     time.sleep(2)
 
+def _find_service_exe(project_root):
+    """
+    定位 service.exe 的位置。v1.7.9+ 用 PyInstaller onedir 模式，
+    service.exe 必须和 _internal/ 同级才能跑起来。
+
+    检查顺序(从最常见到不常见):
+      1. <root>/service.exe + <root>/_internal/                  ← release zip 直接解压到根
+      2. <root>/service/service.exe + <root>/service/_internal/  ← zip 解压保留子目录
+      3. <root>/dist/service/service.exe + .../_internal/        ← 本地 build_backend.py 直接产物
+      4. <root>/dist/service.exe                                  ← legacy 兼容(单文件 onefile)
+      5. <root>/service.exe (无 _internal)                        ← legacy 兼容(单文件 onefile)
+
+    返回:(exe_path, 是否 onedir 且 _internal 齐全) — 找不到则 (None, False)
+    """
+    candidates = [
+        (os.path.join(project_root, "service.exe"),
+         os.path.join(project_root, "_internal")),
+        (os.path.join(project_root, "service", "service.exe"),
+         os.path.join(project_root, "service", "_internal")),
+        (os.path.join(project_root, "dist", "service", "service.exe"),
+         os.path.join(project_root, "dist", "service", "_internal")),
+        # 以下两个是 legacy onefile,_internal 不存在但 exe 可独立跑
+        (os.path.join(project_root, "dist", "service.exe"), None),
+        (os.path.join(project_root, "service.exe"), None),  # 已在 1 覆盖,但保留以防 _internal 缺失
+    ]
+    seen = set()
+    for exe, internal in candidates:
+        if exe in seen:
+            continue
+        seen.add(exe)
+        if not os.path.exists(exe):
+            continue
+        if internal is None:
+            # legacy onefile 路径,直接返回
+            return exe, False
+        if os.path.isdir(internal):
+            # onedir 完整产物
+            return exe, True
+        # exe 存在但 _internal 缺失 — 用户可能下错了/没解压完整
+        print(f"⚠️  Found {exe} but adjacent _internal/ is missing — "
+              f"the new packaging is onedir; both must coexist. Skipping this candidate.")
+    return None, False
+
+
 def start_service():
     """Start the RPA backend service."""
     cleanup_old_processes()
-    
+
     print("Starting RPA Backend Server...")
-    
+
     # We assume this script is in `scripts/`, so project root is one level up.
     # Adjust as needed if it's placed differently in the standalone skill repo.
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
-    # Common locations for the executable or script
-    service_exe = os.path.join(project_root, "service.exe")
-    dist_exe = os.path.join(project_root, "dist", "service.exe")
+
+    # Locate the executable (v1.7.9+ onedir 模式 优先;legacy onefile 兼容)
+    service_exe, is_onedir = _find_service_exe(project_root)
     main_py = os.path.join(project_root, "server.py")
     alt_main_py = os.path.join(project_root, "main.py")
-    
+
     process = None
     env = os.environ.copy()
     env["WEBOT_BACKEND_MODE"] = "1"
@@ -101,12 +144,16 @@ def start_service():
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
     
-    if os.path.exists(service_exe):
-        print(f"Found built executable: {service_exe}")
-        process = subprocess.Popen([service_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
-    elif os.path.exists(dist_exe):
-        print(f"Found built executable: {dist_exe}")
-        process = subprocess.Popen([dist_exe, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
+    if service_exe is not None:
+        # exe 的 cwd 必须是它自己所在目录，否则 onedir 模式找不到 _internal/
+        exe_cwd = os.path.dirname(service_exe)
+        mode_label = "onedir" if is_onedir else "onefile"
+        print(f"Found built executable ({mode_label}): {service_exe}")
+        process = subprocess.Popen(
+            [service_exe, "--no-ui", "--channel-id", "agent_generic"],
+            cwd=exe_cwd, env=env,
+            creationflags=flags, startupinfo=startupinfo, close_fds=True,
+        )
     elif os.path.exists(main_py):
         print(f"Found source file: {main_py}")
         process = subprocess.Popen([sys.executable, main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
@@ -115,7 +162,10 @@ def start_service():
         process = subprocess.Popen([sys.executable, alt_main_py, "--no-ui", "--channel-id", "agent_generic"], cwd=project_root, env=env, creationflags=flags, startupinfo=startupinfo, close_fds=True)
     else:
         print(f"Error: Could not find service.exe or server.py in {project_root}")
-        print("Please ensure you have downloaded the release or cloned the repository correctly.")
+        print("v1.7.9+ 用 PyInstaller onedir 模式打包, 期望以下任一布局:")
+        print(f"  1. {os.path.join(project_root, 'service.exe')} + {os.path.join(project_root, '_internal/')}")
+        print(f"  2. {os.path.join(project_root, 'service', 'service.exe')} + {os.path.join(project_root, 'service', '_internal/')}")
+        print("请确认下载的 zip 包已正确解压(service.exe 和 _internal/ 必须同级)。")
         sys.exit(1)
         
     print(f"Server started with PID: {process.pid}")

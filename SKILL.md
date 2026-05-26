@@ -12,18 +12,45 @@ This skill allows any Agent (like OpenClaw) to act as a WeChat assistant by hook
 ## 1. Installation & Setup (For the Agent)
 
 If the user wants to install this skill or hasn't set it up yet:
-1. Ensure the user is on **Windows** and has **WeChat Desktop 4.1.7** installed (not newer, not older).
-   - Version check: open WeChat → Help (帮助) → About (关于) → confirm version is **4.1.7**
+1. Ensure the user is on **Windows** and has **WeChat Desktop ≥ 4.1.7** installed.
+   - Version check: open WeChat → Help (帮助) → About (关于)
+   - 推荐 **4.1.9 或以上**（语音消息发送能力需要 ≥ 4.1.9）
    - If wrong version, download from: https://n2b8xxdgjx.feishu.cn/wiki/Nbauw9HWsihsQ7kgjYPcfZSCnKb
-2. Download the core binary `service.exe` from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) and place it in the root directory of this skill.
-   ```bash
-   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.0/service.exe
+
+2. **Download the core service bundle** from the [GitHub Releases page](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases).
+
+   > ⚠️ **打包结构变更（v1.7.9+）**:RPA 服务从单文件 `service.exe` 改为 **`service.exe` + `_internal/` 目录**(PyInstaller onedir 模式)。**两个必须同时在同一目录下**,缺一不可。
+
+   Release 资产是 zip 包(如 `service-v1.7.9.zip`),解压到 skill 根目录后应得到:
    ```
-3. Install Python dependencies (if running from source):
+   wechat-rpa-bot-skill/
+     ├── service.exe          ← 主程序
+     ├── _internal/           ← 依赖目录(必须同级,不可删/改名)
+     ├── scripts/
+     ├── launcher/
+     └── ...
+   ```
+
+   *Agent 自动下载示例(注意替换为最新 release URL):*
+   ```bash
+   curl -L -o service.zip https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.9/service-v1.7.9.zip
+   # 解压到 skill 根目录
+   powershell -Command "Expand-Archive -Path service.zip -DestinationPath . -Force"
+   # 校验关键文件就位
+   if (Test-Path service.exe -PathType Leaf -AND (Test-Path _internal -PathType Container)) { echo "OK" } else { echo "FAIL: 解压结构不对" }
+   ```
+
+3. **Install Python dependencies** (for the start/stop scripts):
    ```bash
    pip install psutil requests
    ```
-4. The project uses an **Activation Code** system — no `.env` file needed. Activation codes are obtained from: **www.yokoagi.com**
+
+4. **VB-Cable 虚拟音频驱动**(发送语音消息需要):
+   - 仅当用户要使用「语音消息发送」功能时需要
+   - 用户从 https://vb-audio.com/Cable/ 下载并安装,**安装后必须重启电脑**
+   - 文本/图片/文件等其他功能**不需要**这个驱动
+
+5. The project uses an **Activation Code** system — no `.env` file needed. Activation codes are obtained from: **www.yokoagi.com**
 
 ---
 
@@ -429,6 +456,57 @@ print(result.stdout or result.stderr)
 - `uv run script.py` reads the file from disk — no shell encoding issues
 - The `# /// script` block tells uv to auto-install `pandas` and `openpyxl` if not present
 - Chinese column names are stored as `\u` escapes inside the file — never on the command line
+
+---
+
+### Voice Message Sending — 关键规则
+
+发送**真实微信语音气泡**(不是 mp3 文件附件),通过 `POST /api/agent/chat/send_voice`。
+
+**环境前置(硬要求)**:
+- 微信客户端版本 ≥ **4.1.9**
+- **VB-Cable 虚拟音频驱动**已安装(用户从 https://vb-audio.com/Cable/ 下载装好 + 重启)
+- 用户已在 RPA UI 克隆好音色(`AI 语音配置 → 我的音色`)
+
+**三种输入模式(优先级递减)**:
+| 模式 | 入参 | 何时用 |
+|------|------|--------|
+| 1. audioPath | `"audioPath": "D:/xxx.mp3"` | 已有现成 mp3 |
+| 2. audioFilename | `"audioFilename": "abc.mp3"` | 用户在 UI 预录的素材 |
+| 3. text + voiceId | `"text": "...", "voiceId": "S_xxx"` | **最常用** — 动态合成 |
+
+**voiceId 来源 — 绝对不要编**:
+- 调 `GET /api/agent/voice/voices` 拿可用音色列表(返回 `data: [{voiceId, displayName, ...}]`)
+- 把 `displayName` 列表给用户选,**不要让用户手输 S_xxx**
+- 如果 `count: 0` → 用户还没克隆音色,引导到 UI 添加
+
+**失败兜底**:`success: false` → **回退文本** `POST /api/chat/send_message`(don't retry),并告知用户失败原因。
+
+**Voice Send SOP**:当用户说「用语音 / 发语音 / 克隆音色发」等,**必须先读 `docs/voice_send_sop.md`** 学完整决策矩阵、错误码处理、反例。
+
+```python
+# 完整调用样例(模式 3)
+import requests
+proxies = {"http": None, "https": None}
+headers = {"X-API-Key": "yoko_test", "Content-Type": "application/json"}
+
+# Step 1: 拿音色列表
+voices = requests.get("http://127.0.0.1:9922/api/agent/voice/voices",
+                      headers=headers, proxies=proxies).json()["data"]
+# Step 2: 让用户从 [v["displayName"] for v in voices] 中选
+# Step 3: 发送
+r = requests.post(
+    "http://127.0.0.1:9922/api/agent/chat/send_voice",
+    headers=headers, proxies=proxies, timeout=60,
+    json={"user": "客户张三", "text": "您好,方案已整理好", "voiceId": voices[0]["voiceId"]},
+)
+result = r.json()
+if not result["success"]:
+    # 自动文本兜底
+    requests.post("http://127.0.0.1:9922/api/chat/send_message",
+                  headers=headers, proxies=proxies,
+                  json={"user": "客户张三", "message": "您好,方案已整理好"})
+```
 
 ---
 

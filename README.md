@@ -36,29 +36,50 @@
 智能体可以通过以下步骤自主安装此技能：
 
 1. **确认微信版本（重要）**：
-   本技能**只支持微信桌面版 4.1.7**，不支持其他版本（包括更高版本）。
-   - 版本确认方法：打开微信 → 帮助 → 关于 → 查看版本号是否为 **4.1.7**
-   - 如果版本不符，需先卸载当前微信，再安装指定版本：
-     👉 [下载微信 4.1.7 安装包](https://n2b8xxdgjx.feishu.cn/wiki/Nbauw9HWsihsQ7kgjYPcfZSCnKb)
+   本技能支持微信桌面版 **4.1.7 及以上**。
+   - 版本确认方法：打开微信 → 帮助 → 关于 → 查看版本号
+   - **推荐 4.1.9 或更高版本**(语音消息发送能力需要 ≥ 4.1.9)
+   - 如果版本不符，可下载新版本：
+     👉 [下载微信安装包](https://n2b8xxdgjx.feishu.cn/wiki/Nbauw9HWsihsQ7kgjYPcfZSCnKb)
 
 2. **克隆代码库**：
    ```bash
    git clone https://github.com/LeoMusk/wechat-rpa-bot-skill.git
    cd wechat-rpa-bot-skill
-3. **下载核心服务组件 (`service.exe`)**：
-   此技能依赖 RPA 后端服务。智能体需要从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 `service.exe`（如 `wechat rpa bot service-v1.7.7` 中的附件），并将其放置在 `wechat-rpa-bot-skill` 根目录下。
+   ```
 
-   *Agent 可以使用类似以下的命令自动下载（注意替换为最新的 release URL）：*
+3. **下载核心服务组件 (zip 包)**：
+
+   > ⚠️ **打包结构变更（v1.7.9+）**:RPA 服务从单文件 `service.exe` 改为 **`service.exe` + `_internal/` 目录**(PyInstaller onedir 模式)。两者**必须同时位于同一目录**,缺一不可。
+
+   此技能依赖 RPA 后端服务。从本仓库的 [Releases](https://github.com/LeoMusk/wechat-rpa-bot-skill/releases) 页面下载 **zip 包**(如 `service-v1.7.9.zip`),解压到 `wechat-rpa-bot-skill` 根目录,得到:
+
+   ```
+   wechat-rpa-bot-skill/
+     ├── service.exe          ← 主程序
+     ├── _internal/           ← 依赖目录(必须与 service.exe 同级,不可删/改名)
+     ├── scripts/
+     └── ...
+   ```
+
+   *Agent 可以使用类似以下的命令自动下载并解压：*
    ```bash
-   curl -L -o service.exe https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.7/service.exe
+   curl -L -o service.zip https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/download/v1.7.9/service-v1.7.9.zip
+   powershell -Command "Expand-Archive -Path service.zip -DestinationPath . -Force"
    ```
 
 4. **安装 Python 依赖（用于启动脚本）**：
+   ```bash
+   pip install psutil requests
+   ```
 
-```bash
-pip install psutil requests
-```
-5. **无需额外配置认证（Token）**：
+5. **(可选) VB-Cable 虚拟音频驱动 — 仅语音消息发送需要**：
+   如果需要使用**语音消息发送**功能(发真实微信语音气泡,不是 mp3 文件附件):
+   - 从 https://vb-audio.com/Cable/ 下载 VB-Cable 安装
+   - **安装后必须重启电脑**驱动才生效
+   - 文本/图片/文件等其他功能**不需要**这个驱动
+
+6. **无需额外配置认证（Token）**：
    现在项目采用**激活码 (Activation Code)**方式认证。激活码可在 **[www.yokoagi.com](https://www.yokoagi.com)** 获取。智能体只需在服务启动后，引导用户提供激活码，并直接调用自带的激活接口完成绑定，无需用户手动修改环境变量。
 
 ## � 快速更新指南 (面向普通用户)
@@ -151,6 +172,15 @@ curl.exe -X POST http://127.0.0.1:9922/api/chat/send_message \
 - **📩 消息收发 (Messaging)**
   - **能力**：向指定好友或群聊发送文本、图片、文件；获取历史聊天记录。
   - **提示词案例**："给'文件传输助手'发送一份本月的财务报表，文件路径是 D:\reports\march.xlsx，并留言'这是本月的报表请查收'。"
+
+- **🎙️ 语音消息发送 (Voice Message — v1.7.9+)**
+  - **能力**：发送**真实的微信语音气泡**(不是 mp3 文件附件),支持用克隆音色现合现发。三种输入模式:
+    - **模式 1**：传入本地 mp3 文件绝对路径
+    - **模式 2**：传入 RPA UI 中预录的素材文件名
+    - **模式 3(最常用)**：传入文本 + 克隆音色 voiceId,后端实时合成 + 发送
+  - **环境前置**：微信 ≥ 4.1.9 + 已安装 VB-Cable 虚拟音频驱动 + 已克隆音色(在 RPA UI 中操作)
+  - **提示词案例**："用我的克隆音色给客户张三发条语音:'您好,关于您之前咨询的方案,我整理好了。'"
+  - **详细文档**：`docs/voice_send_sop.md`
 
 - **📢 批量群发 (Mass Sending)**
   - **能力**：根据好友标签（Tags）或指定目标列表（Targets）创建定时或即时的群发任务。

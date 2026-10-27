@@ -60,6 +60,8 @@
 <a id="yobot"></a>
 
 ## 在 YoBot 中使用：集中管理 RPA、智能体与任务
+<img width="1400" height="980" alt="image" src="https://github.com/user-attachments/assets/1b119ff8-f140-45cb-8d58-16ed74775f5e" />
+
 
 [YoBot](https://yobot.yokoagi.com) 是集成了微信 RPA 的桌面 Agent 客户端。它将 RPA 运行管理、微信账号初始化、智能体配置和任务操作集中在一个界面中，也提供对外 MCP 接入。
 

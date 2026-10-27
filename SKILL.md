@@ -1,12 +1,34 @@
 ---
 name: wechat-rpa-bot
-description: Onboard and drive the yoko WeChat RPA MCP server. Use this skill to install yoko_rpa_mcp.exe, start it, activate the license, wire its local MCP endpoint into the host (mcp.json), and then use WeChat automation through the MCP tools it exposes.
+description: Connect an AI Agent to WeChat automation through YoBot or the standalone yoko WeChat RPA MCP server. Use for MCP setup, standalone installation and activation, tool usage, or integrating a custom enterprise agent through the documented customer API.
 ---
 
 # WeChat RPA Bot Skill (MCP edition)
 
 This skill turns any MCP-capable host (OpenClaw / QClaw / WorkBuddy …) into a WeChat assistant by
-**onboarding the local yoko WeChat RPA MCP server** and then driving WeChat through its MCP tools.
+**connecting to YoBot or onboarding the standalone yoko WeChat RPA MCP server** and then driving WeChat through its MCP tools.
+
+## 接入方式与参考文档
+
+已有可用 MCP 连接时，直接复用。用户已选择独立安装包时，继续按下文的独立服务流程操作；安装包继续提供和更新。首次使用且未指定方式时，推荐 [YoBot](https://yobot.yokoagi.com)：客户端集中管理 RPA 启停、微信初始化、插件维护和业务配置，可减少单独管理服务的步骤。
+
+- **通过 YoBot 接入**：按下一节操作，按需读取 [MCP 工具接口文档](references/mcp-tools.md)，其中包含客户端对外工具清单、参数、示例与结果处理。
+- **使用独立 MCP 安装包**：按第 0–7 节操作，保留独立服务的激活、配对和内置手册流程。
+- **企业自己的智能体处理微信消息**：读取 [企业自定义智能体 API](references/customer-agent-api.md)。由企业实现消息处理接口，YoBot 的 RPA 主动调用；不要把这份规范当成独立服务的 REST setup API。
+
+## 通过 YoBot 接入 MCP
+
+1. 引导用户从 [YoBot 官网](https://yobot.yokoagi.com) 安装并运行客户端，确认微信 RPA 业务授权有效、微信已登录并由客户端初始化和托管。
+2. 在「对外开放」开启服务，使用客户端生成的 MCP 配置或配置话术。默认端点是 `http://127.0.0.1:9922/mcp`，传输为 Streamable HTTP，鉴权为 `Authorization: Bearer <连接令牌>`。
+3. 按宿主支持的方式添加或重载 MCP 配置，保留宿主已有的其他服务配置。连接令牌与激活码不同；不要对 YoBot 执行下文独立服务的激活、取 token 或进程恢复步骤。
+4. 获取 `tools/list` 与实际 `inputSchema`，调用 `wechat_list_instances` 验证可用微信账号。连接失败时检查客户端运行状态、对外开放开关和令牌；业务授权问题回到客户端处理。
+5. 根据用户任务按需读取 [接口文档](references/mcp-tools.md)，调用实际存在的工具。YoBot 与独立服务的工具集合可能不同，不要假定 YoBot 提供下文的 `wechat_rpa_read_manual`、授权或服务管理工具。
+
+YoBot 需在微信所在电脑上保持运行；云端 Agent 不能直接访问另一台电脑的 `127.0.0.1`。群发等后台任务应继续查询状态，发送结果不确定时先核对消息，避免重复发送。历史记录查询只能反映已采集并保存的范围。
+
+## 独立 MCP 服务接入
+
+以下心智模型及第 0–7 节适用于独立的 `yoko_rpa_mcp.exe`。
 
 **心智模型（务必先理解）**
 - 微信自动化能力由 `yoko_rpa_mcp.exe` 在用户桌面(Session 1)常驻提供，端口 **9922**，同一进程三门面：
@@ -197,6 +219,6 @@ Headers: X-API-Key: yoko_test          (localhost 关代理)
 ## 7. 维护备注
 
 - **无宿主推送**：本版不做实时事件/心跳（无向宿主主动推送通道）。状态按需查询（§5 末尾）。
-- **手册以 exe 内为准**：SOP/schema 手册打进 `yoko_rpa_mcp.exe`，经 `wechat_rpa_read_manual` 读取；本 skill 仓不再维护 REST 版 `docs/`。合法 topic 见 §5 表下的清单。
+- **独立服务手册以 exe 内为准**：SOP/schema 手册打进 `yoko_rpa_mcp.exe`，经 `wechat_rpa_read_manual` 读取；合法 topic 见 §5 表下的清单。`references/` 中另行公开 YoBot 对外 MCP 和企业智能体 API 文档，不替代独立服务的内置手册。
 - **工具清单以运行时 `tools/list` 为准**：当前版本 27 个工具（已实测）。exe 升级由重新运行最新 `yoko_rpa_mcp_setup.exe` 完成（安装器识别升级、关旧实例、重装并复位自启）。
 - **鉴权两套别混**：REST setup 调用用 `X-API-Key: yoko_test`；MCP 用 `/api/mcp/token` 拿的 Bearer pairing token。

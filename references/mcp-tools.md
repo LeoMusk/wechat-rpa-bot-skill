@@ -2,9 +2,9 @@
 
 [返回项目说明](../README.md#open-interfaces) · [YoBot 官网](https://yobot.yokoagi.com) · [企业智能体 API](customer-agent-api.md)
 
-本文说明 YoBot 客户端「对外开放」提供的微信 RPA 工具。独立 MCP 安装包的安装、激活与内置手册使用方式见 [项目 README](../README.md) 和 [SKILL.md](../SKILL.md)；两种运行方式的工具集合可能不同。
+本文适用于 YoBot 客户端「对外开放」和独立 MCP 安装包的默认公开工具。安装、激活和配对步骤见 [项目 README](../README.md) 和 [SKILL.md](../SKILL.md)。
 
-本文已收录 25 个工具的完整入参说明。源文档 2026-10-20 的更新记录另列「多名单批量导入」「好友备注修改」两项能力，但未附工具名称和参数定义；使用时请从 `tools/list` 获取当前版本的真实工具与 `inputSchema`。
+本文收录 YoBot 客户端 `client` 模式工具集 `1.3` 的全部 28 个工具。第 5.28 节介绍如何读取单聊好友最近可见的朋友圈，以及如何判断哪些原文已记入本地行为日志。
 
 ## 阅读导航
 
@@ -14,9 +14,9 @@
 - [常见业务调用流程](#6-常见业务调用流程)：资料发送、群发、添加好友、聊天总结。
 - [常见问题与处理](#7-常见问题与处理)：连接、授权、任务与数据问题。
 
-|适用范围|通过 MCP，让支持该传输方式的桌面 Agent 调用 YoBot 的微信 RPA 工具|
+|适用范围|通过 MCP 调用 YoBot 或独立安装包提供的微信 RPA 工具|
 |---|---|
-|工具列表|接入时 `tools/list` 返回的实际清单为准|
+|工具列表|默认 28 个，接入时以 `tools/list` 返回的工具及 `inputSchema` 为准|
 |传输方式|MCP Streamable HTTP|
 |默认接入地址|`http://127.0.0.1:9922/mcp`|
 |鉴权方式|`Authorization: Bearer <连接令牌>`|
@@ -25,6 +25,7 @@
 
 |**文档版本**|**日期**|**更新内容**|
 |---|---|---|
+|1.2|2026-11-23|工具集更新至 1.3，共 28 个工具。新增查看单聊好友朋友圈，补齐第 5.26 至 5.28 节的参数与示例|
 |1.1|2026-10-20|共 27 个工具；新增多名单批量导入、好友备注修改2个工具|
 |1.0|2026-10-06|首版覆盖客户端 25 个MCP工具、接入配置、场景、参数、调用示例和结果处理约定|
 
@@ -109,7 +110,7 @@
 }
 ```
 
-后文的 JSON 示例均只展示 **`arguments` 内容**。无参数工具传 `{}`。不要额外包装成 `{"payload": {...}}`，也不要把其他工具或 REST 接口的字段直接套用到 MCP 工具中。
+后文的请求示例只展示 **`arguments` 内容**。无参数工具传 `{}`。不要额外包装成 `{"payload": {...}}`，也不要把其他工具或 REST 接口的字段直接套用到 MCP 工具中。
 
 ### 3.2 参数规则
 
@@ -169,6 +170,9 @@
 |5.23|添加好友|`wechat_get_add_friend_logs`|查询自动添加好友的执行记录|
 |5.24|聊天记录|`wechat_list_sessions`|查询已保存历史的会话|
 |5.25|聊天记录|`wechat_get_session_messages`|读取指定会话的本地历史消息|
+|5.26|添加好友|`wechat_import_friend_list`|从外部结构化数据批量导入一份或多份待添加名单|
+|5.27|联系人与群聊|`wechat_set_friend_remark`|修改或清除微信好友备注，并同步本地资料|
+|5.28|朋友圈|`wechat_read_friend_moments`|读取单聊好友最近可见的朋友圈原文，将非空结果记入本地行为日志|
 
 ## 5. 工具接口详情
 
@@ -373,14 +377,14 @@
 
 |参数|类型|必填|含义及约束|
 |---|---|---|---|
-|`tags`|array\<string\>|条件必填|好友或群标签列表；可用 `untagged` 表示未分组。与 `targets` 至少提供一个非空列表|
+|`tags`|array\<string\>|条件必填|好友标签列表，`untagged` 表示未分组。群聊用准确群名填入 `targets`|
 |`targets`|array\<string\>|条件必填|准确好友名称或群名列表；可以与 `tags` 同时传入，目标合并去重|
 |`text`|string|条件必填|直接发送的文本文案，支持 `{name}` 收件人名称占位符；与 `greeting_group` 二选一|
 |`greeting_group`|string|条件必填|已配置的话术组名称或 ID；使用该组的内容策略，与 `text` 二选一|
 |`schedule_time`|string|否|本地时间，格式 `YYYY-MM-DD HH:mm`；省略即立即执行。必须晚于当前时间，且不超过未来 30 天|
 |`batch_size`|integer|否|每批目标数量，默认 `10`；当前后端将批次大小限制在 `2`～`500`|
 | `send_interval` | string | 否 | 单条发送间隔范围，单位为**秒**，格式如 `"3-8"`；省略时当前后端默认 `"3-8"` |
-| `account_id` | string | 否 | 执行群发的微信账号 ID |
+| `account_id` | string | 多号时必填 | 从 `wechat_list_instances` 选择标签归属及执行群发的同一个微信账号 |
 
 按明确对象立即发送：
 
@@ -412,9 +416,13 @@
 
 - 当前 MCP 入参不包含 `confirmed`、`confirmationId`；不要套用客户端内部工具的两阶段确认参数。
 
+- 如果还不知道标签或已有话术组名称，可请用户在本机管理界面核对。公开工具集中可用 `wechat_get_contacts` 按已知标签查好友，但它返回好友明细。多个标签的人数不能相加当作去重人数。
+
 - `send_interval` 在此接口使用以秒为单位的范围字符串，不要传 `"3-8秒"` 或误当成分钟。
 
 - 一次群发可能拆成多个批次并返回多个任务标识。保存实际任务标识，通过 `wechat_list_mass_sending_tasks` 跟踪；创建成功不代表所有对象已发送成功。
+
+- `delivery_state: "accepted"` 表示已提交。若返回 `delivery_state: "unknown"`，先查群发任务状态再决定是否重试。暂停、恢复、取消的公开工具使用批次 `task_id`，整场群发活动的状态和控制可在本机管理界面处理。
 
 - 示例定时时间仅用于说明格式，实际调用须改为未来 30 天内的时间。
 
@@ -654,6 +662,151 @@
 - `limit` 是读取后的结果裁剪，不是分页游标；当前没有 `offset`、`cursor`、`until` 参数。
 
 - 总结前核对实际返回消息的起止时间和数量，说明记录覆盖范围；部分历史不能表述为完整群聊记录。
+
+### 5.26 批量导入待添加名单 `wechat_import_friend_list`
+
+**使用场景：** 外部系统、CRM 或 Agent 将已整理好的微信号／手机号名单导入 RPA，支持一次提交多份名单，无需提供本机文件路径。
+
+| 参数 | 类型 | 必填 | 含义及约束 |
+| --- | --- | --- | --- |
+| `lists` | array&lt;object&gt; | 是 | 1～100 份名单，所有名单合计最多 20000 条记录，按顺序导入 |
+| `lists[].friends` | array&lt;object&gt; | 是 | 当前名单的记录数组，至少一条 |
+| `lists[].friends[].wxid` | string | 是 | 微信号或手机号，对应表头“微信号/手机号”；不能是空白字符串、数字类型或好友昵称 |
+| `lists[].friends[].remark` | string | 否 | 添加好友时使用的备注，默认空字符串 |
+| `lists[].friends[].tags` | string | 否 | 标签字符串，多个标签用英文逗号分隔，默认空字符串；不是数组 |
+| `lists[].account_ids` | array&lt;string&gt; | 否 | 恰好一个账号时记录归属；省略、空数组或多个账号时待归属，不会按账号复制名单。ID 不得为空白 |
+
+```json
+{
+  "lists": [
+    {
+      "friends": [
+        {"wxid": "<客户甲的手机号>", "remark": "客户甲", "tags": "展会,重点"},
+        {"wxid": "<客户乙的微信号>", "remark": "客户乙"}
+      ],
+      "account_ids": ["<可用微信账号ID>"]
+    },
+    {
+      "friends": [
+        {"wxid": "<客户丙的微信号>", "tags": "线上报名"}
+      ]
+    }
+  ]
+}
+```
+
+**调用说明：**
+
+- 名单和记录对象只接受表中字段；调用方先完成外部数据的字段映射。工具不接收 Excel 路径、文件 URL 或 Base64，也不会自行猜测号码列。
+- 多份名单合入同一个待添加队列，每份有自己的 `batch_id`，不会创建独立的命名名单。
+- 重复 `wxid` 沿用现有导入规则：覆盖备注和标签、重置为 `pending`；跨名单重复时后导入的记录覆盖先前记录。`count` 是处理行数，不等于净新增人数。
+- 仅导入，不开启自动加好友；若自动加好友任务已在运行，可能消费新导入的名单。
+- 工具先校验全部参数，再逐份导入。入库过程不是跨名单事务，后续失败不会回滚已成功名单。
+
+**关键返回字段：**
+
+| 字段 | 含义 |
+| --- | --- |
+| `success` | 所有名单均导入成功才为 `true` |
+| `results[]` | 已尝试的名单结果；包含从 0 开始的 `list_index`、该份 `success`、`httpStatus` 和业务 `data` |
+| `results[].data` | 保留原接口的 `count`、`remaining`、`batch_id`、`assignment_status`、`recording_success` 等字段 |
+| `not_attempted_indices` | 未执行的名单下标；成功时为空数组。任一名单失败后，后续名单不再执行 |
+| `retryable` / `note` | 执行失败时返回 `retryable:false` 及核对提示；不要直接整批重试 |
+
+`recording_success=false` 表示附带的事件／快照记录未成功，不能据此认定名单未入库。请求超时或执行失败也可能发生在保存之后，应先核对当前名单；查询工具最多返回 1000 条，未查到不能直接证明未导入。本工具不提供请求幂等保证。
+
+### 5.27 修改好友备注 `wechat_set_friend_remark`
+
+**使用场景：** 为已有微信好友设置新的备注，或清除备注；确认微信保存后同步 RPA 本地好友资料。
+
+| 参数 | 类型 | 必填 | 含义及约束 |
+| --- | --- | --- | --- |
+| `account_id` | string | 是 | 执行修改的托管微信账号 ID，来自 `wechat_list_instances` |
+| `friend_name` | string | 是 | 好友当前会话显示名称，用于定位好友；不是微信账号 ID |
+| `remark_name` | string | 是 | 新备注；空字符串 `""` 表示清除。不能含首尾空白、换行、制表符或空字符 |
+
+修改示例：
+
+```json
+{
+  "account_id": "<可用微信账号ID>",
+  "friend_name": "客户张先生",
+  "remark_name": "张先生-已购"
+}
+```
+
+清除备注示例：
+
+```json
+{
+  "account_id": "<可用微信账号ID>",
+  "friend_name": "张先生-已购",
+  "remark_name": ""
+}
+```
+
+**调用说明：** 仅支持好友私聊，不支持群聊。工具会操作微信、校验保存、同步本地资料并恢复聊天窗口；不要并发操作同一微信界面。成功后使用返回的 `data.session_name` 继续定位，清除备注后会话名称通常恢复为昵称。
+
+**关键返回字段：** 外层为 `{success,httpStatus,data}`；外层 `success` 同时要求 HTTP 与业务成功。`data` 内的主要字段如下：
+
+| 字段 | 含义及处理 |
+| --- | --- |
+| `success` | 微信备注确认正确、本地资料同步、窗口恢复全部完成 |
+| `wechat_updated` | `true`：确认目标备注生效（含原备注已一致）；`false`：未提交；`null`：尝试提交但结果未确认 |
+| `save_attempted` | 是否尝试按 Enter 保存；原备注已一致时为 `false` |
+| `profile_synced` | 本次是否成功同步本地好友资料 |
+| `ui_restored` | 是否已恢复聊天窗口 |
+| `session_name`、`remark_name`、`wxid` | 确认后的会话名、备注和联系人标识；失败时可能缺省 |
+| `message` | 结果及后续处理提示 |
+
+`wechat_updated=true` 且 `profile_synced=false` 时，应同步好友通讯录，不要再次修改备注。`wechat_updated=null`、请求超时或服务错误时，先检查微信当前备注，不能用旧名称盲目重试；超时／服务错误的包装结果会附带 `retryable:false`。HTTP `409` 表示 RPA 任务占用，`400`／`422` 表示账号绑定或参数问题；HTTP `200` 仍须检查上述业务状态。
+
+### 5.28 查看好友朋友圈 `wechat_read_friend_moments`
+
+打开指定微信账号下的单聊好友资料卡，读取当前已加载且对该账号可见的最近朋友圈，然后关闭朋友圈并返回好友会话。支持微信侧边栏和独立窗口。原文可用于初次打招呼、寻找聊天话题、主动跟进或补充客户画像。
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `account_id` | string | 是 | 已托管的微信账号 ID，取自 `wechat_list_instances` |
+| `friend_name` | string | 是 | 好友当前完整的私聊显示名。有备注时用备注名，否则用昵称 |
+
+**调用参数示例**
+
+```json
+{
+  "account_id": "<可用微信账号ID>",
+  "friend_name": "小林-展会"
+}
+```
+
+**成功结果示例（节选）**
+
+```json
+{
+  "success": true,
+  "httpStatus": 200,
+  "data": {
+    "success": true,
+    "status": "read",
+    "items": ["11月20 20  周末去爬山\n在山顶看到了云海"],
+    "event_recorded": true,
+    "event_id": "evt_a0d791fe28ce401bb28342a3305c6da1",
+    "ui_restored": true
+  }
+}
+```
+
+| `data.status` | 含义 |
+| --- | --- |
+| `read` | `data.items` 按微信展示顺序返回，每条动态对应一个字符串，保留原文的空格、换行和微信提供的日期 |
+| `empty` | 已打开朋友圈，当前列表没有可读动态。可能与好友设置的可见范围有关 |
+| `entry_unavailable` | 已打开好友资料卡，但没有可用的朋友圈入口。好友的可见性设置未知 |
+| `ambiguous_contact` | 当前名称对应多个好友身份，请使用能区分目标好友的备注名 |
+| `unsupported_layout` / `failed` | 未识别朋友圈窗口布局或读取失败，具体原因见 `data.message` |
+
+每次读到非空内容时，会将整批原文作为一条 `moment.album.observed` 观察事件写入该好友的本地行为日志。`data.event_recorded` 表示是否写入成功，成功时返回 `data.event_id`。空结果不会生成观察事件。
+
+`data.ui_restored` 表示是否已回到好友聊天界面。即使外层 `success=false`，本次也可能已返回原文或写入日志。先核对 `data.items` 和 `data.event_recorded`。若回执带有 `retryable=false`，应停止自动重试，以免重复记入同一批动态。
 
 ## 6. 常见业务调用流程
 

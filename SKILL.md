@@ -13,7 +13,7 @@ This skill turns any MCP-capable host (OpenClaw / QClaw / WorkBuddy …) into a 
 已有可用 MCP 连接时，直接复用。用户已选择独立安装包时，继续按下文的独立服务流程操作；安装包继续提供和更新。首次使用且未指定方式时，推荐 [YoBot](https://yobot.yokoagi.com)：客户端集中管理 RPA 启停、微信初始化、插件维护和业务配置，可减少单独管理服务的步骤。
 
 - **通过 YoBot 接入**：按下一节操作，按需读取 [MCP 工具接口文档](references/mcp-tools.md)，其中包含客户端对外工具清单、参数、示例与结果处理。
-- **使用独立 MCP 安装包**：按第 0–7 节操作，保留独立服务的激活、配对和内置手册流程。
+- **使用独立 MCP 安装包**：按第 0–7 节操作，完成独立服务的激活、微信初始化和配对。
 - **企业自己的智能体处理微信消息**：读取 [企业自定义智能体 API](references/customer-agent-api.md)。由企业实现消息处理接口，YoBot 的 RPA 主动调用；不要把这份规范当成独立服务的 REST setup API。
 
 ## 通过 YoBot 接入 MCP
@@ -22,7 +22,7 @@ This skill turns any MCP-capable host (OpenClaw / QClaw / WorkBuddy …) into a 
 2. 在「对外开放」开启服务，使用客户端生成的 MCP 配置或配置话术。默认端点是 `http://127.0.0.1:9922/mcp`，传输为 Streamable HTTP，鉴权为 `Authorization: Bearer <连接令牌>`。
 3. 按宿主支持的方式添加或重载 MCP 配置，保留宿主已有的其他服务配置。连接令牌与激活码不同；不要对 YoBot 执行下文独立服务的激活、取 token 或进程恢复步骤。
 4. 获取 `tools/list` 与实际 `inputSchema`，调用 `wechat_list_instances` 验证可用微信账号。连接失败时检查客户端运行状态、对外开放开关和令牌；业务授权问题回到客户端处理。
-5. 根据用户任务按需读取 [接口文档](references/mcp-tools.md)，调用实际存在的工具。YoBot 与独立服务的工具集合可能不同，不要假定 YoBot 提供下文的 `wechat_rpa_read_manual`、授权或服务管理工具。
+5. 根据用户任务按需读取 [接口文档](references/mcp-tools.md)，调用实际存在的工具。YoBot 与独立安装包的默认 MCP 都可参考这份工具文档。
 
 YoBot 需在微信所在电脑上保持运行；云端 Agent 不能直接访问另一台电脑的 `127.0.0.1`。群发等后台任务应继续查询状态，发送结果不确定时先核对消息，避免重复发送。历史记录查询只能反映已采集并保存的范围。
 
@@ -36,7 +36,7 @@ YoBot 需在微信所在电脑上保持运行；云端 Agent 不能直接访问�
   - `/api/*` — REST（本技能只在**安装/激活/取 token**等 setup 步骤用它）
   - `/` — 可视化控制台（手动兜底）
 - **本技能不直接发微信**：它负责把 MCP server 装好、拉起、激活、把 `/mcp` + token 写进宿主的 `mcp.json`。
-  一旦宿主重载配置，~27 个微信工具就**原生**出现在宿主里，之后由宿主 Agent 直接调用。
+  一旦宿主重载配置，默认 28 个微信工具就**原生**出现在宿主里，之后由宿主 Agent 直接调用。
 - Agent **绝不能自己 spawn 这个 exe**：被 spawn 的进程会继承沙箱/会话隔离，看不见微信桌面。exe 必须由
   用户在自己的交互会话里启动（首启一次；之后 exe 自注册开机自启，自动复活）。
 
@@ -47,7 +47,7 @@ YoBot 需在微信所在电脑上保持运行；云端 Agent 不能直接访问�
 ```
 安装 exe ──▶ 用户首启(Session 1) ──▶ 健康检查(REST) ──▶ 激活 license(REST)
    └──▶ 取 MCP token(REST) ──▶ 生成 mcp.json ──▶ 用户粘贴+重载宿主 ──▶ 验活(MCP tools/list)
-        ──▶ 之后所有微信能力走 MCP 工具(自带 read_manual 手册)
+        ──▶ 在控制台登录并初始化微信 ──▶ 查询可用账号 ──▶ 使用 MCP 工具
 ```
 
 ---
@@ -67,7 +67,7 @@ YoBot 需在微信所在电脑上保持运行；云端 Agent 不能直接访问�
      curl -L -o "$HOME/Downloads/yoko_rpa_mcp_setup.exe" https://github.com/LeoMusk/wechat-rpa-bot-skill/releases/latest/download/yoko_rpa_mcp_setup.exe
      ```
    - 用户双击运行 → **弹出 UAC，需点「是」授予管理员权限**（装到 `C:\Program Files\yoko_rpa_mcp\`，ASCII 路径规避中文路径加载问题）。
-   - 安装器会自动：① 把程序装到 Program Files；② **以普通用户身份**（非管理员，落在用户交互会话 Session 1）立即启动服务 `--supervisor --no-ui`；③ 注册**三通道开机自启**（登录计划任务 + HKCU Run 键 + 启动文件夹）；④ 建桌面/开始菜单图标 **「微信 RPA MCP 服务」**。
+   - 安装器会自动：① 把程序装到 Program Files；② **以普通用户身份**（非管理员，落在用户交互会话 Session 1）立即启动服务 `--supervisor --no-ui`；③ 注册**三通道开机自启**（登录计划任务 + HKCU Run 键 + 启动文件夹）；④ 建桌面/开始菜单图标 **「YoBot私域AI-MCP」**。
    - **装完即已在运行**，无需再手动启动。exe 本体在 `C:\Program Files\yoko_rpa_mcp\yoko_rpa_mcp.exe`（skill 本身不再附带 exe）。
 3. **VB-Cable 虚拟音频驱动**（仅"语音消息发送"需要）：从 https://vb-audio.com/Cable/ 下载安装，**装后重启电脑**。文本/图片/文件等功能不需要。
 4. 无需 `.env`：采用**激活码**体系，激活码从 **www.yokoagi.com** 获取。
@@ -84,7 +84,7 @@ GET `http://127.0.0.1:9922/api/health`（localhost 关代理）。有响应说�
 
 **Step 2 — 若没起来（少数情况）。**
 安装器装完会自动启动、且已注册开机自启，正常无需手动。若 `/api/health` 始终无响应，引导用户：
-> "请双击桌面上的 **「微信 RPA MCP 服务」** 图标启动它（或从开始菜单打开）。启动后**无需回复我**，我会自动检测到就绪并继续。"
+> "请双击桌面上的 **「YoBot私域AI-MCP」** 图标启动它（或从开始菜单打开）。启动后**无需回复我**，我会自动检测到就绪并继续。"
 
 然后继续轮询 `/api/health`。仍不行则问用户是否有报错弹窗，或参考 §6 恢复手段。
 
@@ -92,23 +92,11 @@ GET `http://127.0.0.1:9922/api/health`（localhost 关代理）。有响应说�
 
 ---
 
-## 3. 激活 License（走 REST，setup 操作）
+## 3. 激活独立服务
 
-先探一次初始化状态以判断是否已激活：
-```
-GET  http://127.0.0.1:9922/api/license/machine-code   → 拿本机 machine_code
-```
-- 若服务返回**已激活**（后续 MCP 连接不返回 403）→ 跳到 §4。
-- 若**未激活**：
-  1. 告诉用户：「软件尚未激活。请前往 **www.yokoagi.com** 获取激活码，拿到后发我，我来自动激活。」
-  2. 用户给码后：
-     ```
-     POST http://127.0.0.1:9922/api/license/activate
-     Body: { "activation_code": "<用户提供>", "machine_code": "<step 1>" }
-     ```
-  3. 成功即可继续。MCP 端点每次连接会校验 license（未激活/过期 → 403 并回传 machine_code）。
+打开本机控制台 `http://127.0.0.1:9922/`。如果已经激活，继续配对。如果页面提示需要激活，从 [YokoAI 官网](https://www.yokoagi.com) 获取激活码，并在本机控制台输入。服务健康检查、激活和微信账号是否已初始化可以分别验证。
 
-> 注：REST 的 setup 调用需带 `X-API-Key: yoko_test`（localhost 关代理）。MCP 通道用的是另一套 Bearer token，见 §4，别混。
+需要通过 REST 核对时，先调用 `GET /api/license/verify?force=false` 检查 `valid`。`GET /api/license/machine-code` 只提供绑定所需的机器码。REST 请求使用 `X-API-Key`，MCP 配对使用下一节的 Bearer 令牌。
 
 ---
 
@@ -133,7 +121,7 @@ Headers: X-API-Key: yoko_test          (localhost 关代理)
 }
 ```
 - 需带 `X-API-Key`（此端点不在 api_key 豁免名单内）；未激活也能取（已加入 license 豁免），方便先配好再激活。
-- 若返回 `404 { code: "MCP_DISABLED" }`：说明当前 exe 非 MCP 版（正常应下载 `yoko_rpa_mcp.exe`）。
+- 若返回 `MCP_DISABLED`，检查当前运行的是独立 MCP 版，或在 YoBot 的「对外开放」开启服务。
 
 ### 4.2 生成 mcp.json 片段
 把下面片段给用户（token 换成实际值）。Streamable-HTTP 传输，Bearer 鉴权：
@@ -154,47 +142,27 @@ Headers: X-API-Key: yoko_test          (localhost 关代理)
 ### 4.3 指导用户装配并重载
 > "请把这段配置加入您宿主的 `mcp.json`（或用宿主的 MCP 添加入口填入 URL 和 token），保存后**重启/重载宿主**。重载后微信相关工具会自动出现，之后我们就能直接用了。"
 
-**重要**：本 skill 会话**当场无法**调用刚配好的 MCP 工具——宿主需重载配置后，工具才在**新会话**里原生可用。这是 MCP 的固有机制，不是故障。
+在宿主重载配置后检查工具是否已注册。当前会话看不到新工具时，开启一个新会话。
 
-### 4.4 验活
-用户重载后，在新会话让宿主 Agent：
-- 列工具：应能看到 `wechat_*` 系列 ~27 个工具（`tools/list`）。
-- 调 `wechat_license_info` → 返回 `licensed / machine_code / agent_id`，确认授权与归属正常。
-- 调 `wechat_rpa_read_manual` with `{ "topic": "index" }` → 拿到手册目录，确认手册可读。
+### 4.4 验证连接和微信账号
+
+1. 重载宿主，在 `tools/list` 中确认微信工具已出现。安装包默认提供 28 个工具。
+2. 打开本机控制台 `http://127.0.0.1:9922/`，确认微信已登录，按页面提示刷新或初始化微信实例。
+3. 调用 `wechat_list_instances`。出现已托管账号后，就能用该账号执行微信任务。列表为空时，回到控制台完成微信登录或初始化，再查询一次。
 
 ---
 
-## 5. 用 MCP 工具驱动微信（重载后）
+## 5. 用 MCP 工具驱动微信
 
-**纪律：复杂能力先读手册再调用。** 工具描述里对 SOP 类工具设了 gate「你必须先 `wechat_rpa_read_manual({topic})`」。手册已打进 exe（`mcp_manuals/`），通过 `wechat_rpa_read_manual` 读取，**不要臆造参数**。
+工具的参数、使用场景和回执见 [MCP 工具文档](references/mcp-tools.md)。
 
-**能力地图（意图 → 工具 → 先读手册）**
+**按好友标签群发**
 
-| 意图 | MCP 工具 | 先读手册 topic |
-|---|---|---|
-| 发文本消息 | `wechat_send_message` | — |
-| 发文件 | `wechat_send_file` | — |
-| 发**真实语音气泡** | `wechat_send_voice` / `wechat_list_voices` | `voice_send_sop` |
-| 发朋友圈 / 定时朋友圈 | `wechat_post_moment` / `wechat_create_moment_plan` / `wechat_create_moment_post_task` / `wechat_cancel_moment_post_task` | `moment_post_sop` |
-| AI 自动朋友圈开关 | `wechat_toggle_ai_moment`（无独立手册，参数见工具描述；配 agent 参考 `config_schema`） | — |
-| 群发 | `wechat_mass_sending` | — |
-| 加好友 / 通过好友 SOP | （相关工具，见 tools/list） | `auto_add_friend_sop` |
-| 读联系人 / 同步联系人 | `wechat_get_contacts` / `wechat_sync_contacts` | — |
-| 拉最新消息 | `wechat_fetch_latest_messages` | — |
-| 群聊总结 / 会话历史 | `wechat_list_sessions` / `wechat_get_session_messages` | `group_summary_sop` |
-| 配置读写 | `wechat_get_config` / `wechat_update_config` | `config_schema` |
-| 任务与日志 | `wechat_get_tasks` / `wechat_get_task_logs` | `task_schema` / `task_log_schema` |
-| 多实例本地账号 | `wechat_list_local_users` | `multi_instance_sop` |
-| 初始化微信 | `wechat_initialize` | `basic_setup_checklist` |
-| 打开手动控制台 | `wechat_open_console` → 返回 `http://127.0.0.1:9922/` | — |
-| 授权/归属排查 | `wechat_license_info` | — |
-| 服务自愈 | `wechat_service_status` / `wechat_restart_service` / `wechat_launch_wechat` | — |
+1. 用 `wechat_list_instances` 确认发送账号。多号时由用户选定，并把账号 ID 填入 `account_id`。
+2. 标签或话术组名称不清楚时，在控制台查看。已知标签时可用 `wechat_get_contacts` 带 `tag` 核对好友。群聊使用准确群名作为 `targets`。
+3. 先向用户展示发送账号、目标、文案或话术组、执行时间和间隔，等用户明确确认，再调用 `wechat_mass_sending`。提交成功后用 `wechat_list_mass_sending_tasks` 查批次进度。提交结果未知时先查任务，避免重复群发。
 
-> exe 内实际手册（`wechat_rpa_read_manual` 的合法 topic）：`index`、`basic_setup_checklist`、`multi_instance_sop`、`voice_send_sop`、`moment_post_sop`、`group_summary_sop`、`auto_add_friend_sop`、`config_schema`、`task_schema`、`task_log_schema`。工具名/参数以宿主实际 `tools/list` 为准。
-
-**发消息最佳实践（提醒宿主 Agent）**：直接用用户给的联系人备注名/昵称即可，RPA 会模糊匹配，**不要**先查 wxid，不要用相似名替代。
-
-> **无后台事件推送**：本版不提供主动通知/心跳（不存在实时事件推送通道）。任务失败、掉线、AI 配置错误等状态请**按需查询**——需要时调 `wechat_service_status` / `wechat_get_task_logs`，或引导用户打开控制台（`wechat_open_console`）查看。**不要**向用户承诺"出问题会自动提醒"。
+任务状态和掉线信息可在本机控制台查看。联系人的备注名或昵称应尽量准确。
 
 ---
 
@@ -206,19 +174,19 @@ Headers: X-API-Key: yoko_test          (localhost 关代理)
 |---|---|
 | worker（RPA）崩溃/被杀 | supervisor 秒级自动重启（退出码/心跳/health 三重监控） |
 | supervisor 被杀 | 计划任务 restart-on-failure + 周期复活 / 下次登录三通道自启 |
-| 服务能连但卡住 | 宿主调 `wechat_restart_service`（经 9921 控制通道重启 worker） |
-| 全停 | 用户双击桌面「启动微信RPA」，或托盘「重启服务」 |
+| 服务能连但卡住 | 在托盘菜单重启服务 |
+| 全停 | 用户双击桌面「YoBot私域AI-MCP」，或托盘「重启服务」 |
 | exe 被杀软隔离 | 引导加白名单/重装（代码签名降误报） |
 
 **手动控制台**：服务在跑时 `http://127.0.0.1:9922/` 即完整可视化界面（与 MCP 共享同一后端状态，改动实时互通）。复杂操作可引导用户在此手动完成。
 
-**停止服务**：沙箱内 `taskkill` 跨会话必失败（Session 隔离），别自己尝试。服务由安装器/自启常驻，正常不需要停。若确需停止/卸载，引导用户走「设置 → 应用 → 卸载『微信 RPA MCP 服务』」（卸载会清理自启并杀进程），或让用户在任务管理器结束 `yoko_rpa_mcp.exe`（注意开机自启会再次拉起，彻底停用需卸载或用 §6 的 `wechat_restart_service` 之外的手段）。
+**停止服务**：沙箱内 `taskkill` 跨会话必失败（Session 隔离），别自己尝试。服务由安装器/自启常驻，正常不需要停。若确需停止/卸载，引导用户走「设置 → 应用 → 卸载『微信 RPA MCP 服务』」（卸载会清理自启并杀进程），或通过托盘菜单退出。
 
 ---
 
 ## 7. 维护备注
 
 - **无宿主推送**：本版不做实时事件/心跳（无向宿主主动推送通道）。状态按需查询（§5 末尾）。
-- **独立服务手册以 exe 内为准**：SOP/schema 手册打进 `yoko_rpa_mcp.exe`，经 `wechat_rpa_read_manual` 读取；合法 topic 见 §5 表下的清单。`references/` 中另行公开 YoBot 对外 MCP 和企业智能体 API 文档，不替代独立服务的内置手册。
-- **工具清单以运行时 `tools/list` 为准**：当前版本 27 个工具（已实测）。exe 升级由重新运行最新 `yoko_rpa_mcp_setup.exe` 完成（安装器识别升级、关旧实例、重装并复位自启）。
+- **工具和场景文档**见 [MCP 工具文档](references/mcp-tools.md)。初始化、业务配置和服务管理在本机控制台或托盘完成。
+- **升级**时重新运行最新的 `yoko_rpa_mcp_setup.exe`。安装器会关闭旧进程、覆盖安装并恢复开机自启。
 - **鉴权两套别混**：REST setup 调用用 `X-API-Key: yoko_test`；MCP 用 `/api/mcp/token` 拿的 Bearer pairing token。
